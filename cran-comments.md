@@ -51,6 +51,13 @@ regression test (`dev/02_regression_check.R`) against the frozen
    not use `\method{ebalance}{trim}(...)` in its `\usage` block.
    Using `\method{}` would be misleading.
 
+3. **Possibly misspelled words: "reweighting"** (in CRAN incoming
+   feasibility check on win-builder R-devel). This is a standard
+   technical term in the literature on entropy balancing, propensity
+   score weighting, and survey reweighting; the spell-checker simply
+   does not have it in its base wordlist. The package's title page
+   on CRAN since 2014 has used "reweighting" without comment.
+
 The other NOTEs from `--as-cran` are environment-specific (HTML math
 rendering when V8 is unavailable; CRAN incoming feasibility URL
 checks for our development repo) and will not appear on CRAN's build
