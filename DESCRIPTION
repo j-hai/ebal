@@ -1,8 +1,8 @@
 Package: ebal
 Type: Package
 Title: Entropy Reweighting to Create Balanced Samples
-Version: 0.2.0
-Date: 2026-04-27
+Version: 0.2.1
+Date: 2026-04-28
 Authors@R: person("Jens", "Hainmueller", email = "jhain@stanford.edu",
                   role = c("aut", "cre"))
 Description: Implements entropy balancing, a data preprocessing procedure

@@ -11,14 +11,13 @@ export(eb,
        line.searcher,
        matrixmaker)
 
-S3method(ebalance, default)
-S3method(ebalance, formula)
-# NOTE: ebalance.trim is a top-level legacy function that pre-dates the
-# addition of the ebalance() S3 generic. It is intentionally NOT registered
-# as a method so that UseMethod() does not dispatch to it for an object of
-# class "trim" — that would be confusing since the function expects an
-# input of class "ebalance". R CMD check emits an informational NOTE about
-# Rd \method{} markup; that is accepted in cran-comments.md.
+# S3 method registrations for the print/summary/plot/weights methods on
+# ebalance and ebalance.trim objects. We intentionally do NOT make
+# ebalance() itself an S3 generic: the formula vs matrix dispatch is
+# handled in-function by inherits(Treatment, "formula"). This avoids a
+# CRAN R CMD check NOTE that would otherwise flag the long-standing
+# top-level function ebalance.trim() as an "apparent method" of a
+# (would-be) generic ebalance().
 S3method(print, ebalance)
 S3method(print, ebalance.trim)
 S3method(print, summary.ebalance)
@@ -29,7 +28,3 @@ S3method(plot, ebalance)
 S3method(plot, ebalance.trim)
 S3method(weights, ebalance)
 S3method(weights, ebalance.trim)
-
-
-
-

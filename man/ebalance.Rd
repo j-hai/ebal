@@ -1,7 +1,5 @@
 \name{ebalance}
 \alias{ebalance}
-\alias{ebalance.default}
-\alias{ebalance.formula}
 
 \title{
 Entropy balancing
@@ -24,20 +22,18 @@ control group to match target moments computed from a treatment group such
 that the reweighted data can be used to analyze the average treatment effect
 on the treated.
 
-Two interfaces are supported. The default method takes a \code{Treatment}
-vector and a covariate matrix \code{X}; the formula method takes a two-sided
-formula and a \code{data} frame.
+Two interfaces are supported. With \code{Treatment} as a numeric or logical
+vector, supply the covariate matrix \code{X} directly. With \code{Treatment}
+as a two-sided \code{formula}, supply a \code{data} frame; the formula's
+left-hand side is used as the treatment indicator and the right-hand side
+as the covariate matrix (the intercept column is dropped automatically).
 }
 
 \usage{
-ebalance(Treatment, \dots)
-
-\method{ebalance}{default}(Treatment, X, base.weight = NULL,
-        norm.constant = NULL, coefs = NULL,
-        max.iterations = 200, constraint.tolerance = 1,
-        print.level = 0, \dots)
-
-\method{ebalance}{formula}(Treatment, data, \dots)
+ebalance(Treatment, X = NULL, base.weight = NULL,
+         norm.constant = NULL, coefs = NULL,
+         max.iterations = 200, constraint.tolerance = 1,
+         print.level = 0, data = NULL, \dots)
 }
 
 \arguments{

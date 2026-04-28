@@ -1,3 +1,17 @@
+# ebal 0.2.1
+
+## Internal restructure (no user-visible change)
+
+* `ebalance()` is no longer an S3 generic. The formula vs. matrix
+  dispatch is now handled inside the function via
+  `inherits(Treatment, "formula")`. The user-facing API is unchanged:
+  `ebalance(treat ~ x1 + x2, data = df)` and
+  `ebalance(Treatment = t, X = X)` both work exactly as before.
+  This change was made to satisfy CRAN's auto-checker, which flagged
+  the long-standing top-level function `ebalance.trim()` as an
+  "apparent method" of the `ebalance` generic and refused the 0.2.0
+  submission.
+
 # ebal 0.2.0
 
 ## Tooling and infrastructure

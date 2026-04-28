@@ -1,16 +1,50 @@
-ebalance <- function(Treatment, ...) UseMethod("ebalance")
+ebalance <- function(Treatment,
+                     X = NULL,
+                     base.weight = NULL,
+                     norm.constant = NULL,
+                     coefs = NULL,
+                     max.iterations = 200,
+                     constraint.tolerance = 1,
+                     print.level = 0,
+                     data = NULL,
+                     ...) {
 
-ebalance.default <- function(Treatment,
-                             X,
-                             base.weight = NULL,
-                             norm.constant = NULL,
-                             coefs = NULL,
-                             max.iterations = 200,
-                             constraint.tolerance = 1,
-                             print.level = 0,
-                             ...) {
+  # ---- formula interface ---------------------------------------------------
+  # If the user passed a two-sided formula as the first argument, build
+  # Treatment and X from formula + data and continue with the matrix
+  # interface. This is implemented as an in-function dispatch rather than
+  # via S3 (UseMethod) to avoid a CRAN R CMD check NOTE that triggers when
+  # ebalance is a generic and ebalance.trim — a long-standing top-level
+  # function whose name accidentally matches the <generic>.<class> pattern
+  # — looks like a method whose signature does not match the generic.
+  if (inherits(Treatment, "formula")) {
+    formula <- Treatment
+    if (is.null(data)) {
+      stop("'data' is required when calling ebalance() with a formula")
+    }
+    if (length(formula) != 3L) {
+      stop("formula must be two-sided, e.g. treat ~ x1 + x2")
+    }
+
+    mf <- model.frame(formula, data = data, na.action = na.pass)
+    treat <- model.response(mf)
+    if (is.null(treat)) {
+      stop("formula has no response (left-hand side); expected treat ~ x1 + x2 + ...")
+    }
+
+    Xmat <- model.matrix(formula, data = data)
+    if ("(Intercept)" %in% colnames(Xmat)) {
+      Xmat <- Xmat[, colnames(Xmat) != "(Intercept)", drop = FALSE]
+    }
+
+    Treatment <- treat
+    X <- Xmat
+  }
 
   # ---- input checks --------------------------------------------------------
+  if (is.null(X)) {
+    stop("'X' is required when 'Treatment' is not a formula")
+  }
   if (sum(Treatment != 1 & Treatment != 0) > 0) {
     stop("Treatment indicator ('Treatment') must be a logical variable, TRUE (1) or FALSE (0)")
   }
@@ -20,7 +54,6 @@ ebalance.default <- function(Treatment,
 
   Treatment.in <- Treatment
   Treatment <- as.numeric(Treatment)
-  X.in <- X
   X <- as.matrix(X)
 
   if (sum(is.na(X)) > 0) {
@@ -107,27 +140,4 @@ ebalance.default <- function(Treatment,
 
   class(z) <- "ebalance"
   z
-}
-
-ebalance.formula <- function(Treatment, data, ...) {
-  formula <- Treatment
-  if (missing(data) || is.null(data)) {
-    stop("'data' is required when calling ebalance() with a formula")
-  }
-  if (length(formula) != 3L) {
-    stop("formula must be two-sided, e.g. treat ~ x1 + x2")
-  }
-
-  mf <- model.frame(formula, data = data, na.action = na.pass)
-  treat <- model.response(mf)
-  if (is.null(treat)) {
-    stop("formula has no response (left-hand side); expected treat ~ x1 + x2 + ...")
-  }
-
-  X <- model.matrix(formula, data = data)
-  if ("(Intercept)" %in% colnames(X)) {
-    X <- X[, colnames(X) != "(Intercept)", drop = FALSE]
-  }
-
-  ebalance.default(Treatment = treat, X = X, ...)
 }

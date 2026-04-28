@@ -1,6 +1,14 @@
 # cran-comments.md
 
-## Submission notes for ebal 0.2.0
+## Submission notes for ebal 0.2.1
+
+This is a resubmission of 0.2.0 with one internal change: `ebalance()`
+is no longer an S3 generic. In 0.2.0 it was, and the auto-checker
+flagged the long-standing top-level function `ebalance.trim()` as an
+"apparent method" of that generic. We have moved the formula-vs-matrix
+dispatch inside `ebalance()` itself (via `inherits(Treatment, "formula")`),
+which keeps the user-facing API byte-for-byte identical with 0.2.0
+while removing the two NOTEs that triggered the auto-rejection.
 
 This is a substantial update to the previously published ebal 0.1-8.
 
@@ -35,33 +43,18 @@ regression test (`dev/02_regression_check.R`) against the frozen
 
 ### R CMD check results
 
-`R CMD check --as-cran` produces 2 NOTEs that we ask CRAN to accept:
+`R CMD check --as-cran` produces 1 substantive NOTE:
 
-1. **S3 generic/method consistency for `ebalance.trim`** —
-   `ebalance.trim` is a top-level legacy function from version 0.1
-   (2014) that pre-dates the introduction of the `ebalance` S3
-   generic in this release. Its name accidentally follows the
-   `<generic>.<class>` pattern, but it is not intended to be
-   dispatched via `ebalance()` and is not registered as an S3 method
-   in NAMESPACE. Renaming it would break a long-standing user-facing
-   API; we accept the legacy name and the corresponding NOTE.
-
-2. **`\usage` markup for `ebalance.trim.Rd`** — same root cause:
-   because `ebalance.trim` is not an S3 method, we deliberately do
-   not use `\method{ebalance}{trim}(...)` in its `\usage` block.
-   Using `\method{}` would be misleading.
-
-3. **Possibly misspelled words: "reweighting"** (in CRAN incoming
+* **Possibly misspelled words: "reweighting"** (in CRAN incoming
    feasibility check on win-builder R-devel). This is a standard
    technical term in the literature on entropy balancing, propensity
    score weighting, and survey reweighting; the spell-checker simply
    does not have it in its base wordlist. The package's title page
    on CRAN since 2014 has used "reweighting" without comment.
 
-The other NOTEs from `--as-cran` are environment-specific (HTML math
-rendering when V8 is unavailable; CRAN incoming feasibility URL
-checks for our development repo) and will not appear on CRAN's build
-machines.
+(Local `R CMD check` also emits an HTML math rendering NOTE when V8
+is unavailable; this is environment-specific and will not appear on
+CRAN's build machines.)
 
 ### Reverse dependencies
 
