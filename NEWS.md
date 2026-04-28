@@ -1,5 +1,22 @@
 # ebal 0.2.0
 
+## Tooling and infrastructure
+
+* `Authors@R` field replaces the older `Author` / `Maintainer` pair
+  (current CRAN style).
+* `Depends: methods` moved to `Imports: graphics, methods, stats` so
+  the package no longer attaches its dependencies onto the user's
+  search path.
+* New `tests/testthat/` suite with 54 assertions covering the
+  matrix and formula interfaces, the ebalance.trim graceful-fallback
+  behavior, the new S3 methods, and the helper functions
+  (`matrixmaker`, `getsquares`).
+* `README.md` with quick-start examples for both the matrix and
+  formula interfaces and a section on trimming.
+* GitHub Actions CI workflow (`R-CMD-check.yaml`) runs against R
+  release on macOS / Windows / Ubuntu, R devel on Ubuntu, and one
+  prior R release on Ubuntu.
+
 ## New features (additive — old call signatures unchanged)
 
 * **Formula interface.** `ebalance(treat ~ x1 + x2, data = df)` now
