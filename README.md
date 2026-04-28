@@ -1,6 +1,6 @@
 # ebal
 
-[![R-CMD-check](https://github.com/jhainmueller/ebal/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/jhainmueller/ebal/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/j-hai/ebal/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/j-hai/ebal/actions/workflows/R-CMD-check.yaml)
 
 Entropy balancing for the construction of balanced samples in observational
 studies. Reweights a control group so that user-specified covariate moments
@@ -24,7 +24,7 @@ install.packages("ebal")
 
 # Development version from GitHub
 # install.packages("remotes")
-remotes::install_github("jhainmueller/ebal")
+remotes::install_github("j-hai/ebal")
 ```
 
 ## Quick start
