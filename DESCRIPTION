@@ -1,7 +1,7 @@
 Package: ebal
 Type: Package
 Title: Entropy Reweighting to Create Balanced Samples
-Version: 0.1-10
+Version: 0.2.0
 Date: 2026-04-27
 Author: Jens Hainmueller
 Maintainer: Jens Hainmueller <jhain@stanford.edu>

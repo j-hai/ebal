@@ -140,17 +140,19 @@ ebalance.trim <-
    } # end automated if
 
 z <- list(
-          target.margins = ebalanceobj$target.margins,
-          co.xdata = ebalanceobj$co.xdata,
-          w = eb.out$Weights.ebal,
-          coefs = eb.out$coefs,
-          maxdiff = eb.out$maxdiff,
-          norm.constant = ebalanceobj$norm.constant,
+          target.margins       = ebalanceobj$target.margins,
+          co.xdata             = ebalanceobj$co.xdata,
+          w                    = eb.out$Weights.ebal,
+          coefs                = eb.out$coefs,
+          maxdiff              = eb.out$maxdiff,
+          norm.constant        = ebalanceobj$norm.constant,
           constraint.tolerance = ebalanceobj$constraint.tolerance,
-          max.iterations = ebalanceobj$max.iterations,
-          base.weight = ebalanceobj$base.weight,
-          converged = eb.out$converged,
-          trim.feasible = trim.feasible
+          max.iterations       = ebalanceobj$max.iterations,
+          base.weight          = ebalanceobj$base.weight,
+          converged            = eb.out$converged,
+          trim.feasible        = trim.feasible,
+          Treatment            = ebalanceobj$Treatment,
+          X                    = ebalanceobj$X
     )
 
 class(z) <- "ebalance.trim"

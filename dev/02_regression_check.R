@@ -185,6 +185,11 @@ baseline <- readRDS(baseline_rds)
 
 # ---- compare ----------------------------------------------------------------
 # Returns a character vector of differences (empty = identical within tol).
+#
+# Additive policy: if a key exists in `cur` but not in `base`, that's a new
+# field added in a later phase. We don't flag it as a regression — additive
+# API changes are allowed by the overhaul plan. Conversely, a key that
+# exists in `base` but not in `cur` IS a regression (we removed something).
 compare_one <- function(cur, base, path = "", tol = opt_tol) {
   if (inherits(cur, "ebalance_error") || inherits(base, "ebalance_error")) {
     if (inherits(cur, "ebalance_error") &&
@@ -201,8 +206,10 @@ compare_one <- function(cur, base, path = "", tol = opt_tol) {
   }
   if (is.list(cur) && is.list(base)) {
     diffs <- character()
-    keys <- union(names(cur), names(base))
-    for (k in keys) {
+    # Only iterate keys that are in `base`; new keys in `cur` are
+    # tolerated as additive. Keys removed from `cur` show up as a NULL
+    # vs <value> mismatch and ARE flagged.
+    for (k in names(base)) {
       diffs <- c(diffs, compare_one(cur[[k]], base[[k]],
                                     paste0(path, "$", k), tol))
     }

@@ -4,16 +4,19 @@
 Trimming of Weights for Entropy Balancing
 }
 \description{
-Function to trim weights obtained from entropy balancing. It takes the output from a call to \code{ebalance} and trims the data weights (subject to the moment conditions) such that the 
-ratio of the maximum/minimum weight to the mean weight is 
-reduced to satisfy a user specified target. If no user target is specified the maximum weight ratio is automatically trimmed as far as is feasible given the data.
+Trim weights obtained from entropy balancing. Takes the output from a call to
+\code{\link{ebalance}} and trims the weights (subject to the moment conditions)
+so that the ratio of the maximum (or minimum) weight to the mean weight is
+reduced to satisfy a user-specified target. If no target is specified, the
+maximum weight ratio is automatically trimmed as far as is feasible given the
+data.
 }
 \usage{
 ebalance.trim(ebalanceobj, max.weight = NULL,
-min.weight = 0, max.trim.iterations = 200,
-max.weight.increment = 0.92,
-min.weight.increment = 1.08,
-print.level = 0)
+              min.weight = 0, max.trim.iterations = 200,
+              max.weight.increment = 0.92,
+              min.weight.increment = 1.08,
+              print.level = 0)
 }
 
 \arguments{

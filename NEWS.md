@@ -1,3 +1,43 @@
+# ebal 0.2.0
+
+## New features (additive — old call signatures unchanged)
+
+* **Formula interface.** `ebalance(treat ~ x1 + x2, data = df)` now
+  works, in addition to the original `ebalance(Treatment = t, X = X)`
+  matrix interface. Both produce identical numerical results. The
+  formula interface uses `model.frame()` and `model.matrix()` and
+  drops the `(Intercept)` column automatically.
+
+* **`weights()` method.** `weights(fit)` returns a length-\eqn{n}
+  vector aligned to the original `Treatment`: treated units get
+  weight 1, control units get their entropy-balancing weight. Drop-in
+  for `lm(..., weights = w)` or `survey::svyglm()`.
+
+* **`print()` and `summary()` methods.** `print(fit)` shows a
+  one-screen overview (counts, moments, convergence status, and for
+  trimmed objects whether the trim target was feasible). `summary(fit)`
+  returns a balance table comparing treated and control means
+  (and standardized differences) before and after weighting.
+
+* **`plot()` method.** Base-graphics Love plot of standardized
+  differences before vs. after weighting, one row per covariate.
+  No ggplot2 or other graphics dependency.
+
+* **New return fields on `ebalance` and `ebalance.trim` objects:**
+  `Treatment` (the original treatment indicator) and `X` (the original
+  covariate matrix). Existing fields are unchanged. These enable the
+  `summary()`, `plot()`, and `weights()` methods without requiring the
+  user to pass the original data back in.
+
+## Internal
+
+* `ebalance` is now an S3 generic with `ebalance.default` (the
+  workhorse with the matrix interface) and `ebalance.formula`
+  (formula method) registered. `ebalance.trim` is intentionally NOT
+  registered as a method; it remains a top-level function callable as
+  `ebalance.trim(fit)` exactly as before. R CMD check emits an
+  informational NOTE about the legacy name and we accept it.
+
 # ebal 0.1-10
 
 ## Numerical hardening

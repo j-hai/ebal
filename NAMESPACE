@@ -1,6 +1,34 @@
-importFrom("stats", "optimize", "var")
+importFrom("stats", "model.frame", "model.matrix", "model.response",
+           "na.pass", "optimize", "var", "weighted.mean", "weights")
+importFrom("graphics", "abline", "axis", "legend", "par", "points")
 importFrom("methods", "is")
-export(eb,ebalance,ebalance.trim,baltest.collect,getsquares,line.searcher,matrixmaker)
+
+export(eb,
+       ebalance,
+       ebalance.trim,
+       baltest.collect,
+       getsquares,
+       line.searcher,
+       matrixmaker)
+
+S3method(ebalance, default)
+S3method(ebalance, formula)
+# NOTE: ebalance.trim is a top-level legacy function that pre-dates the
+# addition of the ebalance() S3 generic. It is intentionally NOT registered
+# as a method so that UseMethod() does not dispatch to it for an object of
+# class "trim" — that would be confusing since the function expects an
+# input of class "ebalance". R CMD check emits an informational NOTE about
+# Rd \method{} markup; that is accepted in cran-comments.md.
+S3method(print, ebalance)
+S3method(print, ebalance.trim)
+S3method(print, summary.ebalance)
+S3method(print, summary.ebalance.trim)
+S3method(summary, ebalance)
+S3method(summary, ebalance.trim)
+S3method(plot, ebalance)
+S3method(plot, ebalance.trim)
+S3method(weights, ebalance)
+S3method(weights, ebalance.trim)
 
 
 
