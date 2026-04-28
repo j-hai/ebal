@@ -34,7 +34,7 @@ if(print.level>=3){cat("new loss",loss.new,"old loss=",loss.old,"\n")}
 
   if(print.level>=3){cat("LS Step Length is ",ss.out$minimum,"\n")}
   if(print.level>=3){cat("Loss is",ss.out$objective,"\n")}
-  coefs = Coefs - ss.out$minimum*solve(hessian,gradient)
+  coefs <- Coefs - ss.out$minimum * newton
  }
 }
 if(print.level>=1 && converged){cat("Converged within tolerance \n")}

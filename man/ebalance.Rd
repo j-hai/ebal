@@ -48,7 +48,7 @@ Maximum number of iterations that will be run when attempting to reweight the da
 This is the tolerance level used by \code{ebalance} to decide if the moments in the reweighted data are equal to the target moments.
 }
   \item{print.level}{
-Controls the level of printing: 0 (normal printing), 2 (detailed), and 3 (very detailed).
+Controls the level of printing: 0 (silent, the default), 1 (normal printing), 2 (detailed), and 3 (very detailed).
 }
 }
 \details{

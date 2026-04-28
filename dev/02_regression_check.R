@@ -36,9 +36,11 @@ for (a in args) {
 # is in place, add the scenario name here so the regression check passes
 # again. Anything not listed here MUST match the baseline within `opt_tol`.
 expected_diffs <- list(
-  # Example (filled in during phase 1/2):
-  # s4a_trim_mild = "Phase 2: overflow guard so trim doesn't NaN-out.",
-  # s4b_trim_aggressive = "Phase 2: overflow guard.",
+  # Phase 1: ebalance.trim now populates $target.margins (was NULL in 0.1-8
+  # because the code referenced ebalanceobj$tr.total which doesn't exist).
+  s5_trim_auto = "Phase 1 fix A: target.margins now populated, was NULL in 0.1-8."
+  # s4a_trim_mild and s4b_trim_aggressive still crash in 0.1-9 (same error
+  # path); Phase 2 overflow guard will move them off this list.
 )
 
 # ---- locate paths -----------------------------------------------------------

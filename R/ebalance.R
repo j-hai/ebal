@@ -50,8 +50,8 @@ ncontrols <- sum(Treatment==0)
         stop("length(base.weight) !=  number of controls  sum(Treatment==0)")
     }
 
-co.x <- X[Treatment==0,]
-co.x <- cbind(rep(1,ncontrols),co.x)
+co.x <- X[Treatment==0, , drop = FALSE]
+co.x <- cbind(rep(1, ncontrols), co.x)
 
     if(qr(co.x)$rank != ncol(co.x)){
       stop("collinearity in covariate matrix for controls (remove collinear covariates)")
@@ -87,7 +87,7 @@ eb.out <- eb(tr.total=tr.total,
                print.level=print.level
                )
 
- if(eb.out$converged == TRUE & print.level>=0) {
+ if (eb.out$converged && print.level > 0) {
         cat("Converged within tolerance \n")
      }
 

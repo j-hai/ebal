@@ -31,8 +31,8 @@ ebalance.trim <-
 
  ### Trimming to user supplied max weight or trim once starting from max weight obtained from distribution)
    for(iter.trim in 1:max.trim.iterations) {
-    if( minimization == FALSE ) {
-    cat("Trim iteration",format(iter.trim,digits=3),"\n")
+    if (!minimization && print.level > 0) {
+      cat("Trim iteration", format(iter.trim, digits = 3), "\n")
     }
       eb.out <- eb(tr.total=ebalanceobj$target.margins,
                co.x=ebalanceobj$co.xdata,
@@ -44,25 +44,31 @@ ebalance.trim <-
                )
      weights.ratio = eb.out$Weights.ebal/mean(eb.out$Weights.ebal)
      coefs <- eb.out$coefs
-     if(max(weights.ratio) <= max.weight && min(weights.ratio) >= min.weight) {
-      if( minimization == FALSE ) { cat("Converged within tolerance \n") }
-     break
+     if (max(weights.ratio) <= max.weight && min(weights.ratio) >= min.weight) {
+      if (!minimization && print.level > 0) { cat("Converged within tolerance \n") }
+      break
      }
-      w.trimming <- w.trimming*ifelse(weights.ratio>max.weight,w.trimming*((max.weight*max.weight.increment)/weights.ratio),1)
-     if(min.weight) w.trimming <- w.trimming*
-       ifelse(weights.ratio<min.weight,w.trimming*((min.weight*min.weight.increment)/weights.ratio),1)
+     w.trimming <- w.trimming * ifelse(weights.ratio > max.weight,
+                                       w.trimming * ((max.weight * max.weight.increment) / weights.ratio),
+                                       1)
+     if (min.weight > 0) {
+       w.trimming <- w.trimming * ifelse(weights.ratio < min.weight,
+                                         w.trimming * ((min.weight * min.weight.increment) / weights.ratio),
+                                         1)
+     }
     }
 
  ### automated trimming to minimize max weight
-   if( minimization == TRUE ) {
-   cat("Automated trimmig of max weight ratio \n")
-       for(iter.max.weight in 1:max.trim.iterations) {
+   if (minimization) {
+     if (print.level > 0) cat("Automated trimming of max weight ratio \n")
+     for (iter.max.weight in 1:max.trim.iterations) {
         max.weight.old     <- max.weight
-        weights.ratio.old  <- max(eb.out$Weights.ebal/mean(eb.out$Weights.ebal))
+        weights.ratio.old  <- max(eb.out$Weights.ebal / mean(eb.out$Weights.ebal))
         eb.out.old <- eb.out # store old weights
-         if(print.level >= 0) {
-           cat("Trim iteration",format(iter.max.weight,digits=3),"Max Weight Ratio:",format(weights.ratio.old,digits=4),"\n")
-           }
+        if (print.level > 0) {
+           cat("Trim iteration", format(iter.max.weight, digits = 3),
+               "Max Weight Ratio:", format(weights.ratio.old, digits = 4), "\n")
+        }
         suppressWarnings(IsError <- try(
             for(iter.trim in 1:max.trim.iterations) {
               eb.out <- eb(tr.total=ebalanceobj$target.margins,
@@ -75,10 +81,15 @@ ebalance.trim <-
                )
              weights.ratio <- eb.out$Weights.ebal/mean(eb.out$Weights.ebal)
              coefs <- eb.out$coefs
-            if(max(weights.ratio) <= max.weight && min(weights.ratio)>=min.weight) break
-             w.trimming <- w.trimming*ifelse(weights.ratio>max.weight,w.trimming*((max.weight*max.weight.increment)/weights.ratio),1)
-            if(min.weight) w.trimming = w.trimming*
-            ifelse(weights.ratio<min.weight,w.trimming*((min.weight*min.weight.increment)/weights.ratio),1)
+             if (max(weights.ratio) <= max.weight && min(weights.ratio) >= min.weight) break
+             w.trimming <- w.trimming * ifelse(weights.ratio > max.weight,
+                                               w.trimming * ((max.weight * max.weight.increment) / weights.ratio),
+                                               1)
+             if (min.weight > 0) {
+               w.trimming <- w.trimming * ifelse(weights.ratio < min.weight,
+                                                 w.trimming * ((min.weight * min.weight.increment) / weights.ratio),
+                                                 1)
+             }
            }
     ,silent=TRUE)) # end try call
     
@@ -97,13 +108,13 @@ ebalance.trim <-
    } # end max weight loop
   # play back the results
      eb.out <- eb.out.old
-     if(eb.out$converged == TRUE) {
+     if (eb.out$converged && print.level > 0) {
         cat("Converged within tolerance \n")
      }
-  } # end automated if
+   } # end automated if
 
 z <- list(
-          target.margins = ebalanceobj$tr.total,
+          target.margins = ebalanceobj$target.margins,
           co.xdata = ebalanceobj$co.xdata,
           w=eb.out$Weights.ebal,
           coefs=eb.out$coefs,

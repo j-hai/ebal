@@ -1,18 +1,19 @@
 matrixmaker <-
-function(mat){
-k <- ncol(mat)
-obs <- nrow(mat)
-out <- matrix(NA,obs,((k*(k+1))/2 +1))
-count <- 0
- for (i in 1:k){
-  for (j in 1:i){
-  count <- count + 1
-   out[,count] <- mat[,i] * mat[,j]
-   colnames(out)[c(count,((k*(k+1))/2 +1))] <-
-   c(paste(colnames(mat)[i],".",colnames(mat)[j],sep=""), "dummy")
+function(mat) {
+  k <- ncol(mat)
+  obs <- nrow(mat)
+  ncombs <- (k * (k + 1)) / 2
+  out <- matrix(NA, obs, ncombs)
+  out.names <- character(ncombs)
+  count <- 0
+  for (i in seq_len(k)) {
+    for (j in seq_len(i)) {
+      count <- count + 1
+      out[, count] <- mat[, i] * mat[, j]
+      out.names[count] <- paste(colnames(mat)[i], ".", colnames(mat)[j], sep = "")
+    }
   }
- }
-out <- cbind(mat,out[,1:((k*(k+1))/2)])
-out
+  colnames(out) <- out.names
+  cbind(mat, out)
 }
 

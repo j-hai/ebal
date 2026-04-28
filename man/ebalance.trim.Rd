@@ -38,7 +38,7 @@ Increment for iterative trimming of the ratio of the minimum to mean weight (a s
 the attempted reduction in the max ratio is 8 percent).
 }
   \item{print.level}{
-Controls the level of printing: 0 (normal printing), 2 (detailed), and 3 (very detailed).
+Controls the level of printing: 0 (silent, the default), 1 (normal printing), 2 (detailed), and 3 (very detailed).
 }
 }
 
@@ -72,7 +72,7 @@ Jens Hainmueller
 }
 
 \seealso{
-Also see \code{\link{ebalance.trim}}.
+Also see \code{\link{ebalance}}.
 }
 
 \examples{
