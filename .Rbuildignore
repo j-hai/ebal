@@ -1,0 +1,11 @@
+^dev$
+^\.git$
+^\.gitignore$
+^\.Rbuildignore$
+^\.github$
+^.*\.Rproj$
+^\.Rproj\.user$
+^README\.md$
+^cran-comments\.md$
+^_pkgdown\.yml$
+^docs$

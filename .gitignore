@@ -1,0 +1,21 @@
+# R CMD check artifacts
+*.Rcheck/
+
+# R session
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+
+# macOS
+.DS_Store
+Icon?
+
+# Editor
+*.swp
+.vscode/
+.idea/
+
+# Build artifacts (we don't track our own tarballs in the repo)
+ebal_*.tar.gz
+!dev/ebal_0.1-8_baseline.tar.gz
