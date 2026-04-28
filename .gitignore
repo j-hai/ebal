@@ -19,3 +19,12 @@ Icon?
 # Build artifacts (we don't track our own tarballs in the repo)
 ebal_*.tar.gz
 !dev/ebal_0.1-8_baseline.tar.gz
+
+# revdepcheck working state — keep the human-readable reports tracked,
+# ignore the heavy installed-libraries cache.
+revdep/library.noindex/
+revdep/checks.noindex/
+revdep/data.sqlite
+revdep/*.fail
+revdep/*.full
+dev/revdep_run.log

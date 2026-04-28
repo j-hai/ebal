@@ -1,4 +1,6 @@
 ^dev$
+^revdep$
+^cran-comments\.md$
 ^\.git$
 ^\.gitignore$
 ^\.Rbuildignore$
@@ -6,6 +8,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^README\.md$
-^cran-comments\.md$
 ^_pkgdown\.yml$
 ^docs$

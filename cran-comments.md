@@ -58,15 +58,27 @@ machines.
 
 ### Reverse dependencies
 
-`ebal` is a dependency of a small number of CRAN packages. We have
-verified that:
+`ebal` has 6 reverse dependencies on CRAN: `cobalt`, `fdid`, `hbal`,
+`jointCalib`, `missDiag`, `rbw`. We ran `revdepcheck::revdep_check()`
+comparing the new 0.2.0 against the CRAN baseline 0.1-8 on each:
+
+* **0 new problems.** The 4 packages that built locally (`cobalt`,
+  `fdid`, `missDiag`, `rbw`) check identically against both versions.
+* **2 packages (`hbal`, `jointCalib`) failed to install** in our local
+  environment because of a gfortran linker issue on macOS
+  (`emutls_w` library not found). The failure is identical against
+  both ebal versions (`## In both` in the revdep report), so it is
+  an environment issue, not a regression introduced by 0.2.0. We
+  expect CRAN's check farm to install both packages successfully.
+
+We have additionally verified by direct inspection that:
 
 * The exported function names and signatures of all pre-existing
   user-facing entry points (`ebalance`, `ebalance.trim`,
   `baltest.collect`, `eb`, `getsquares`, `line.searcher`,
   `matrixmaker`) are unchanged.
 * The `ebalance` and `ebalance.trim` return objects retain every
-  previously-documented field. Two new fields (`Treatment`, `X` on
+  previously-documented field. Three new fields (`Treatment`, `X` on
   `ebalance`; plus `trim.feasible` on `ebalance.trim`) are added,
   which is purely additive.
 
