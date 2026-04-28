@@ -25,8 +25,7 @@ Convenience methods for inspecting and using objects returned by
 \method{print}{summary.ebalance}(x, digits = 4, \dots)
 \method{print}{summary.ebalance.trim}(x, digits = 4, \dots)
 \method{plot}{ebalance}(x, abs.values = TRUE,
-     xlab = if (abs.values) "Absolute standardized difference" else "Standardized difference",
-     main = "Covariate balance (before vs. after entropy balancing)", \dots)
+     xlab = NULL, main = NULL, \dots)
 \method{plot}{ebalance.trim}(x, \dots)
 \method{weights}{ebalance}(object, \dots)
 \method{weights}{ebalance.trim}(object, \dots)

@@ -21,6 +21,5 @@ Imports:
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-URL: https://web.stanford.edu/~jhain/, https://github.com/jhainmueller/ebal
-BugReports: https://github.com/jhainmueller/ebal/issues
+URL: https://web.stanford.edu/~jhain/
 Encoding: UTF-8

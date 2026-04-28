@@ -184,10 +184,16 @@ weights.ebalance.trim <- function(object, ...) {
 
 plot.ebalance <- function(x,
                           abs.values = TRUE,
-                          xlab = if (abs.values) "Absolute standardized difference"
-                                 else "Standardized difference",
-                          main = "Covariate balance (before vs. after entropy balancing)",
+                          xlab = NULL,
+                          main = NULL,
                           ...) {
+  if (is.null(xlab)) {
+    xlab <- if (abs.values) "Absolute standardized difference"
+            else "Standardized difference"
+  }
+  if (is.null(main)) {
+    main <- "Covariate balance (before vs. after entropy balancing)"
+  }
   if (is.null(x$Treatment) || is.null(x$X)) {
     stop("plot() requires the Treatment and X fields, which are stored ",
          "by the current package version. Refit to use plot().")
