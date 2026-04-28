@@ -29,37 +29,63 @@ ebalance.trim <-
    w.trimming <- 1
    coefs <- ebalanceobj$coefs
 
- ### Trimming to user supplied max weight or trim once starting from max weight obtained from distribution)
-   for(iter.trim in 1:max.trim.iterations) {
+ ### Trimming to user supplied max weight or trim once starting from max weight obtained from distribution
+   eb.out <- NULL
+   trim.feasible <- FALSE
+   for (iter.trim in 1:max.trim.iterations) {
     if (!minimization && print.level > 0) {
       cat("Trim iteration", format(iter.trim, digits = 3), "\n")
     }
-      eb.out <- eb(tr.total=ebalanceobj$target.margins,
-               co.x=ebalanceobj$co.xdata,
-               coefs=coefs,
-               base.weight=ebalanceobj$w*w.trimming,
-               max.iterations=ebalanceobj$max.iterations,
-               constraint.tolerance=ebalanceobj$constraint.tolerance,
-               print.level=print.level
-               )
-     weights.ratio = eb.out$Weights.ebal/mean(eb.out$Weights.ebal)
-     coefs <- eb.out$coefs
-     if (max(weights.ratio) <= max.weight && min(weights.ratio) >= min.weight) {
-      if (!minimization && print.level > 0) { cat("Converged within tolerance \n") }
+    next.eb <- tryCatch(
+      eb(tr.total = ebalanceobj$target.margins,
+         co.x = ebalanceobj$co.xdata,
+         coefs = coefs,
+         base.weight = ebalanceobj$w * w.trimming,
+         max.iterations = ebalanceobj$max.iterations,
+         constraint.tolerance = ebalanceobj$constraint.tolerance,
+         print.level = print.level),
+      error = function(e) e
+    )
+    if (inherits(next.eb, "error")) {
+      if (is.null(eb.out)) {
+        # First iteration failed outright; cannot recover.
+        stop("eb() failed during trimming: ", conditionMessage(next.eb))
+      }
+      if (!minimization) {
+        warning("Trimming halted at iteration ", iter.trim,
+                " (", conditionMessage(next.eb),
+                "). Returning the most recent feasible fit; the requested ",
+                "max.weight target may be infeasible for this data.",
+                call. = FALSE)
+      }
       break
-     }
-     w.trimming <- w.trimming * ifelse(weights.ratio > max.weight,
-                                       w.trimming * ((max.weight * max.weight.increment) / weights.ratio),
-                                       1)
-     if (min.weight > 0) {
-       w.trimming <- w.trimming * ifelse(weights.ratio < min.weight,
-                                         w.trimming * ((min.weight * min.weight.increment) / weights.ratio),
-                                         1)
-     }
     }
+    eb.out <- next.eb
+    weights.ratio <- eb.out$Weights.ebal / mean(eb.out$Weights.ebal)
+    coefs <- eb.out$coefs
+    if (max(weights.ratio) <= max.weight && min(weights.ratio) >= min.weight) {
+      if (!minimization && print.level > 0) cat("Converged within tolerance \n")
+      trim.feasible <- TRUE
+      break
+    }
+    w.trimming <- w.trimming * ifelse(weights.ratio > max.weight,
+                                      w.trimming * ((max.weight * max.weight.increment) / weights.ratio),
+                                      1)
+    if (min.weight > 0) {
+      w.trimming <- w.trimming * ifelse(weights.ratio < min.weight,
+                                        w.trimming * ((min.weight * min.weight.increment) / weights.ratio),
+                                        1)
+    }
+   }
 
  ### automated trimming to minimize max weight
    if (minimization) {
+     # Automated minimization mode: the "feasible" semantics are different
+     # from the explicit-target case. The algorithm intentionally pushes
+     # max.weight downward until it can't go further, so the returned
+     # result is the best achievable trimming and is considered feasible
+     # by definition.
+     trim.feasible <- TRUE
      if (print.level > 0) cat("Automated trimming of max weight ratio \n")
      for (iter.max.weight in 1:max.trim.iterations) {
         max.weight.old     <- max.weight
@@ -116,14 +142,15 @@ ebalance.trim <-
 z <- list(
           target.margins = ebalanceobj$target.margins,
           co.xdata = ebalanceobj$co.xdata,
-          w=eb.out$Weights.ebal,
-          coefs=eb.out$coefs,
-          maxdiff=eb.out$maxdiff,
+          w = eb.out$Weights.ebal,
+          coefs = eb.out$coefs,
+          maxdiff = eb.out$maxdiff,
           norm.constant = ebalanceobj$norm.constant,
-          constraint.tolerance=ebalanceobj$constraint.tolerance,
-          max.iterations=ebalanceobj$max.iterations,
-          base.weight=ebalanceobj$base.weight,
-          converged =  eb.out$converged
+          constraint.tolerance = ebalanceobj$constraint.tolerance,
+          max.iterations = ebalanceobj$max.iterations,
+          base.weight = ebalanceobj$base.weight,
+          converged = eb.out$converged,
+          trim.feasible = trim.feasible
     )
 
 class(z) <- "ebalance.trim"

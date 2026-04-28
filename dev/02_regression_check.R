@@ -38,9 +38,13 @@ for (a in args) {
 expected_diffs <- list(
   # Phase 1: ebalance.trim now populates $target.margins (was NULL in 0.1-8
   # because the code referenced ebalanceobj$tr.total which doesn't exist).
-  s5_trim_auto = "Phase 1 fix A: target.margins now populated, was NULL in 0.1-8."
-  # s4a_trim_mild and s4b_trim_aggressive still crash in 0.1-9 (same error
-  # path); Phase 2 overflow guard will move them off this list.
+  # Phase 2 adds a $trim.feasible logical to the same return list.
+  s5_trim_auto = "Phase 1: target.margins now populated; Phase 2: trim.feasible field added.",
+  # Phase 2: overflow guard + try() wrapper in trim's explicit-max-weight
+  # branch. Both scenarios now return an ebalance.trim object with
+  # trim.feasible = FALSE and a warning, instead of crashing.
+  s4a_trim_mild = "Phase 2: overflow guard + try() recovery; returns trim.feasible=FALSE instead of error.",
+  s4b_trim_aggressive = "Phase 2: overflow guard + try() recovery; returns trim.feasible=FALSE instead of error."
 )
 
 # ---- locate paths -----------------------------------------------------------

@@ -58,7 +58,7 @@ co.x <- cbind(rep(1, ncontrols), co.x)
     }
 
 
-tr.total <- apply(as.matrix(X[Treatment==1, , drop = FALSE]),2,sum)
+tr.total <- colSums(X[Treatment == 1, , drop = FALSE])
 
     if (is.null(norm.constant)) {
         norm.constant <- ntreated

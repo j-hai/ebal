@@ -10,7 +10,7 @@ function(tr.total=tr.total,
 
 converged <- FALSE
 for(iter in 1:max.iterations) {
- weights.temp <-  c(exp(co.x %*% coefs))
+ weights.temp <-  c(.safe_exp(co.x %*% coefs))
  weights.ebal <- weights.temp *  base.weight
  co.x.agg   <- c(weights.ebal %*% co.x)
  gradient   <- co.x.agg - tr.total

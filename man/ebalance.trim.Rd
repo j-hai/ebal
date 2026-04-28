@@ -53,7 +53,8 @@ An list object of class \code{ebalance.trim} with the following elements:
   \item{constraint.tolerance}{The tolerance level used for the balance constraints.}
   \item{max.iterations}{Maximum number of trimming iterations used.}
   \item{base.weight}{The base weight used.}
-  \item{converged}{Logical flag if algorithm converged within tolerance.}
+  \item{converged}{Logical flag if the inner entropy-balancing algorithm converged within tolerance on the last successful iteration.}
+  \item{trim.feasible}{Logical flag indicating whether the requested trimming target was achieved. \code{TRUE} when (a) an explicit \code{max.weight} (and optional \code{min.weight}) target was met, or (b) automated minimization mode finished. \code{FALSE} when an explicit target was not met because the maximum number of iterations was exceeded or the inner solve became numerically singular; in that case a warning is emitted and the most recent feasible fit is returned.}
 }
 
 \references{
