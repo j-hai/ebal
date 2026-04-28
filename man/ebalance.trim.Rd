@@ -81,28 +81,46 @@ Also see \code{\link{ebalance}}.
 
 \examples{
 
-# create toy data: treatment indicator and three covariates X1-3
-treatment   <- c(rep(0,50),rep(1,30))
-X           <- rbind(replicate(3,rnorm(50,0)),replicate(3,rnorm(30,.5)))
-colnames(X) <- paste("x",1:3,sep="")
+# Toy data with substantial covariate imbalance
+set.seed(20260427)
+n_t <- 50; n_c <- 100
+df  <- data.frame(
+  treat = c(rep(1, n_t), rep(0, n_c)),
+  x1    = c(rnorm(n_t, 0.6), rnorm(n_c, 0)),
+  x2    = c(rnorm(n_t, 0.6), rnorm(n_c, 0)),
+  x3    = c(rnorm(n_t, 0.6), rnorm(n_c, 0))
+)
+fit <- ebalance(treat ~ x1 + x2 + x3, data = df)
 
-# entropy balancing
-eb.out <- ebalance(Treatment=treatment,
-                   X=X)
-# means in treatment group data
-apply(X[treatment==1,],2,mean)
-# means in reweighted control group data
-apply(X[treatment==0,],2,weighted.mean,w=eb.out$w)
-# means in raw data control group data
-apply(X[treatment==0,],2,mean)
+# ---- Auto-minimization mode ---------------------------------------
+# Without a target, ebalance.trim() iteratively reduces the maximum
+# weight ratio as far as the data allows. trim.feasible is TRUE by
+# definition for auto mode.
+trimmed <- ebalance.trim(fit)
+trimmed                        # print method shows trim.feasible + max ratio
+summary(trimmed)               # balance table for the trimmed weights
 
-# trim weights
-eb.out.tr <- ebalance.trim(eb.out)
-# means in reweighted control group data
-apply(X[treatment==0,],2,weighted.mean,w=eb.out.tr$w)
+# Compare untrimmed vs. trimmed weight distributions
+round(summary(fit$w),     2)
+round(summary(trimmed$w), 2)
 
-# untrimmed and trimmed weights
-round(summary(eb.out$w),2)
-round(summary(eb.out.tr$w),2)
+# ---- Explicit max.weight target -----------------------------------
+# Pick a target above the natural minimum ratio so it's achievable.
+target <- max(fit$w / mean(fit$w)) * 1.5
+trimmed2 <- ebalance.trim(fit, max.weight = target)
+trimmed2$trim.feasible         # TRUE — target was met
+
+# ---- Infeasible target: graceful fallback (new in 0.2.0) ----------
+# Asking for something the data cannot support no longer crashes.
+# A warning is emitted and the most recent feasible fit is returned
+# with trim.feasible = FALSE.
+trimmed3 <- suppressWarnings(ebalance.trim(fit, max.weight = 1.2))
+trimmed3$trim.feasible         # FALSE — target was infeasible
+max(trimmed3$w) / mean(trimmed3$w)   # the best we could do
+
+# ---- Use the trimmed weights downstream ---------------------------
+df$y <- df$treat * 5 + df$x1 + df$x2 + df$x3 + rnorm(nrow(df))
+df$w <- weights(trimmed)       # length = nrow(df), treated = 1
+coef(lm(y ~ treat, data = df, weights = w))["treat"]
 
 }

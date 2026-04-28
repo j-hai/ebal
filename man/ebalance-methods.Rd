@@ -76,16 +76,38 @@ returns a numeric vector of length equal to the original
 
 \examples{
 set.seed(1)
-treatment <- c(rep(0, 50), rep(1, 30))
-X <- rbind(replicate(3, rnorm(50, 0)), replicate(3, rnorm(30, 0.5)))
-colnames(X) <- paste0("x", 1:3)
+df <- data.frame(
+  treat = c(rep(1, 30), rep(0, 50)),
+  x1    = c(rnorm(30, 0.5), rnorm(50, 0)),
+  x2    = c(rnorm(30, 0.5), rnorm(50, 0)),
+  x3    = c(rnorm(30, 0.5), rnorm(50, 0))
+)
 
-eb.out <- ebalance(Treatment = treatment, X = X)
-print(eb.out)
-summary(eb.out)
-w <- weights(eb.out)
-length(w) == length(treatment)
+fit <- ebalance(treat ~ x1 + x2 + x3, data = df)
+
+# print(): one-screen overview of the fit
+print(fit)
+
+# summary(): pre/post means and standardized differences for each
+# covariate; the post-weighting std diffs should be near zero.
+summary(fit)
+
+# weights(): length-n vector aligned to the original treatment.
+# Treated observations get weight 1; control observations get the
+# entropy-balancing weight. Drop-in for lm(..., weights = w).
+w <- weights(fit)
+length(w) == nrow(df)
+all(w[df$treat == 1] == 1)
+
+# Same methods on a trimmed object
+trimmed <- ebalance.trim(fit)
+print(trimmed)              # also shows trim.feasible
+summary(trimmed)
+weights(trimmed)[1:5]
+
 \dontrun{
-plot(eb.out)
+# Love plot of standardized differences before vs. after
+plot(fit)
+plot(trimmed)
 }
 }

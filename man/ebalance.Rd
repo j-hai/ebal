@@ -127,27 +127,41 @@ Kullback, S. (1959), Information Theory and Statistics, Wiley, NY.
 
 \examples{
 
-# Create toy data
-set.seed(1)
-treatment   <- c(rep(0, 50), rep(1, 30))
-X           <- rbind(replicate(3, rnorm(50, 0)), replicate(3, rnorm(30, .5)))
-colnames(X) <- paste0("x", 1:3)
-df          <- data.frame(treat = treatment, X)
+# Toy observational-study data: treatment is associated with older,
+# more educated, higher-income units; the true effect on the outcome
+# is 5, but a naive comparison is biased upward by the confounders.
+set.seed(42)
+n_t <- 75; n_c <- 250
+df  <- data.frame(
+  treat  = c(rep(1, n_t), rep(0, n_c)),
+  age    = c(rnorm(n_t, 45,  8), rnorm(n_c, 38, 10)),
+  educ   = c(rnorm(n_t, 16,  2.5), rnorm(n_c, 13, 3)),
+  income = c(rnorm(n_t, 65, 12), rnorm(n_c, 50, 15))
+)
+df$y <- 0.1 * df$age + 0.3 * df$educ + 0.05 * df$income +
+        5 * df$treat + rnorm(nrow(df), 0, 3)
 
-# Matrix interface
-eb.out <- ebalance(Treatment = treatment, X = X)
+# ---- Naive (biased) regression ------------------------------------
+coef(lm(y ~ treat, data = df))["treat"]   # ATT estimate; pulled up by confounders
 
-# Formula interface (equivalent)
-eb.out2 <- ebalance(treat ~ x1 + x2 + x3, data = df)
+# ---- Entropy balancing: formula interface -------------------------
+fit <- ebalance(treat ~ age + educ + income, data = df)
+fit                       # one-screen overview via print()
+summary(fit)              # balance table: pre/post means and std diffs
 
-# Means in the treated group
-apply(X[treatment == 1, ], 2, mean)
-# Means in the reweighted control group
-apply(X[treatment == 0, ], 2, weighted.mean, w = eb.out$w)
-# Means in the raw control group
-apply(X[treatment == 0, ], 2, mean)
+# ---- Equivalent matrix interface ----------------------------------
+X <- as.matrix(df[, c("age", "educ", "income")])
+fit2 <- ebalance(Treatment = df$treat, X = X)
+all.equal(fit$w, fit2$w)  # identical results
 
-# Or use summary() for a balance table
-summary(eb.out)
+# ---- Use the weights downstream ----------------------------------
+df$w <- weights(fit)              # length = nrow(df); treated get 1
+coef(lm(y ~ treat, data = df,     # weighted regression, ATT
+        weights = w))["treat"]
+
+# ---- Visualize balance --------------------------------------------
+\dontrun{
+plot(fit)                         # base-R Love plot, no dependencies
+}
 
 }
