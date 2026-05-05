@@ -1,0 +1,152 @@
+---
+title: "Quickstart: entropy balancing with `ebal`"
+author: "Jens Hainmueller"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Quickstart: entropy balancing with ebal}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.5,
+  dpi = 96
+)
+set.seed(20260504)
+```
+
+## What is entropy balancing?
+
+Entropy balancing (Hainmueller 2012) reweights a control sample so that
+its covariate moments match the treated group's, with weights staying
+as close as possible to a base distribution (uniform by default) in a
+maximum-entropy sense. The output weights drop directly into a
+`lm(..., weights = w)` call to estimate the average treatment effect on
+the treated.
+
+This vignette shows the package's user-facing API on a small toy
+dataset.
+
+```{r setup}
+library(ebal)
+```
+
+## A minimal example
+
+```{r toy}
+set.seed(20260504)
+n0 <- 200; n1 <- 100
+X <- rbind(
+  replicate(3, rnorm(n0, mean = 0)),       # controls
+  replicate(3, rnorm(n1, mean = 0.5))      # treated, shifted
+)
+colnames(X) <- c("x1", "x2", "x3")
+treatment <- c(rep(0, n0), rep(1, n1))
+```
+
+Pre-weighting, the control means differ from the treated means
+markedly:
+
+```{r raw-balance}
+treated_means <- colMeans(X[treatment == 1, ])
+control_means <- colMeans(X[treatment == 0, ])
+rbind(treated = treated_means, control = control_means)
+```
+
+## Fit
+
+```{r fit}
+fit <- ebalance(treat ~ x1 + x2 + x3,
+                data = data.frame(treat = treatment, X))
+fit
+```
+
+Either the formula interface above, or the matrix interface
+`ebalance(Treatment = treatment, X = X)`, works. Both produce an
+`ebalance` object with print / summary / plot / weights methods.
+
+## Tidy output
+
+```{r tidy}
+# tidy() / glance() / augment() are registered against the generics in
+# the `generics` package, which `broom` re-exports. Loading either
+# makes the methods discoverable.
+library(generics)
+tidy(fit)
+glance(fit)
+```
+
+`tidy()` is a per-covariate balance table. `glance()` is a one-row
+summary including the Kish effective sample size and convergence flag.
+
+`weights(fit)` returns a length-`n` vector aligned to the original
+data: treated units get weight 1, controls get the entropy-balancing
+weight.
+
+```{r weights-shape}
+length(weights(fit))
+range(weights(fit)[treatment == 0])
+```
+
+## Plotting
+
+The base-graphics `plot(fit)` and the `ggplot2` `autoplot(fit)` both
+produce a Love plot of standardized differences before vs. after
+weighting:
+
+```{r autoplot, eval = requireNamespace("ggplot2", quietly = TRUE)}
+library(ggplot2)
+autoplot(fit)
+```
+
+## Using the weights downstream
+
+The natural drop-in for a weighted regression:
+
+```{r weighted-lm, eval = FALSE}
+df <- data.frame(treat = treatment, X, y = X[, 1] + 2 * treatment + rnorm(n0 + n1))
+df$w <- weights(fit)
+lm(y ~ treat, data = df, weights = w)
+```
+
+## Two solver methods
+
+By default `ebalance()` uses Newton-Raphson on the dual problem (fast,
+exact when the Hessian is well-conditioned). As of 0.3-0 you can also
+use a torch-based autodiff solver (BFGS on gradients computed via
+automatic differentiation) — contributed by Apoorva Lal:
+
+```{r autodiff, eval = FALSE}
+fit_ad <- ebalance(treat ~ x1 + x2 + x3,
+                   data = data.frame(treat = treatment, X),
+                   method = "autodiff")
+```
+
+The two methods produce equivalent weights (within solver tolerance).
+Newton is faster on the small problems most users have; the autodiff
+path is more stable when the optimization landscape is poorly
+conditioned and scales better at large covariate counts. `torch` is in
+`Suggests:`; the first call may require `torch::install_torch()` to
+download libtorch.
+
+## See also
+
+- `?ebalance` for the long-form argument documentation.
+- `?ebalance.trim` for trimmed weights when the base ebalance solution
+  is too dispersed.
+- `tidy()`, `glance()`, `augment()`, `autoplot()` — discoverable via
+  `library(broom)` / `library(ggplot2)`.
+
+## References
+
+- Hainmueller, J. (2012). Entropy balancing for causal effects: A
+  multivariate reweighting method to produce balanced samples in
+  observational studies. *Political Analysis*, 20(1), 25–46.

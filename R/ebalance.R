@@ -7,7 +7,10 @@ ebalance <- function(Treatment,
                      constraint.tolerance = 1,
                      print.level = 0,
                      data = NULL,
+                     method = c("newton", "autodiff"),
                      ...) {
+
+  method <- match.arg(method)
 
   # ---- formula interface ---------------------------------------------------
   # If the user passed a two-sided formula as the first argument, build
@@ -110,13 +113,22 @@ ebalance <- function(Treatment,
   }
 
   # ---- run algorithm -------------------------------------------------------
-  eb.out <- eb(tr.total = tr.total,
-               co.x = co.x,
-               coefs = coefs,
-               base.weight = base.weight,
-               max.iterations = max.iterations,
-               constraint.tolerance = constraint.tolerance,
-               print.level = print.level)
+  eb.out <- if (method == "newton") {
+    eb(tr.total = tr.total,
+       co.x = co.x,
+       coefs = coefs,
+       base.weight = base.weight,
+       max.iterations = max.iterations,
+       constraint.tolerance = constraint.tolerance,
+       print.level = print.level)
+  } else {
+    .eb_autodiff(tr.total = tr.total,
+                 co.x = co.x,
+                 base.weight = base.weight,
+                 max.iterations = max.iterations,
+                 constraint.tolerance = constraint.tolerance,
+                 print.level = print.level)
+  }
 
   if (eb.out$converged && print.level > 0) {
     cat("Converged within tolerance \n")

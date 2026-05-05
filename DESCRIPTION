@@ -1,10 +1,14 @@
 Package: ebal
 Type: Package
 Title: Entropy Reweighting to Create Balanced Samples
-Version: 0.2.1
-Date: 2026-04-28
-Authors@R: person("Jens", "Hainmueller", email = "jhain@stanford.edu",
-                  role = c("aut", "cre"))
+Version: 0.3-0
+Date: 2026-05-04
+Authors@R: c(
+    person("Jens", "Hainmueller", email = "jhain@stanford.edu",
+           role = c("aut", "cre")),
+    person("Apoorva", "Lal", email = "lal.apoorva@gmail.com",
+           role = "aut",
+           comment = "torch-based autodiff solver (R/ebalance_autodiff.R)"))
 Description: Implements entropy balancing, a data preprocessing procedure
     described in Hainmueller (2012, <doi:10.1093/pan/mpr025>) that allows
     users to reweight a dataset such that the covariate distributions in
@@ -19,8 +23,14 @@ Imports:
     methods,
     stats
 Suggests:
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    torch,
+    ggplot2,
+    generics
 Config/testthat/edition: 3
+VignetteBuilder: knitr
 URL: https://web.stanford.edu/~jhain/, https://github.com/j-hai/ebal
 BugReports: https://github.com/j-hai/ebal/issues
 Encoding: UTF-8

@@ -33,7 +33,8 @@ as the covariate matrix (the intercept column is dropped automatically).
 ebalance(Treatment, X = NULL, base.weight = NULL,
          norm.constant = NULL, coefs = NULL,
          max.iterations = 200, constraint.tolerance = 1,
-         print.level = 0, data = NULL, \dots)
+         print.level = 0, data = NULL,
+         method = c("newton", "autodiff"), \dots)
 }
 
 \arguments{
@@ -77,6 +78,17 @@ target moments.
   \item{print.level}{
 Controls the level of printing: 0 (silent, the default), 1 (normal printing),
 2 (detailed), and 3 (very detailed).
+}
+  \item{method}{
+Solver. \code{"newton"} (default) uses the classical Newton-Raphson loop on
+the dual problem -- fast and exact for well-conditioned problems, behavior
+unchanged from earlier releases. \code{"autodiff"} uses BFGS on gradients
+computed by automatic differentiation via the \pkg{torch} package -- more
+stable when the optimization landscape is poorly conditioned and scales
+better at large covariate counts. The autodiff path requires the
+\pkg{torch} package (in \code{Suggests:}); the first call may require
+\code{torch::install_torch()} to download libtorch. Contributed by Apoorva
+Lal; ported from \url{https://github.com/apoorvalal/ebal}.
 }
   \item{\dots}{
 Additional arguments. For the formula method, passed through to the default

@@ -1,5 +1,6 @@
 importFrom("stats", "model.frame", "model.matrix", "model.response",
-           "na.pass", "optimize", "var", "weighted.mean", "weights")
+           "na.pass", "optim", "optimize", "var", "weighted.mean",
+           "weights")
 importFrom("graphics", "abline", "axis", "legend", "par", "points")
 importFrom("methods", "is")
 
@@ -28,3 +29,18 @@ S3method(plot, ebalance)
 S3method(plot, ebalance.trim)
 S3method(weights, ebalance)
 S3method(weights, ebalance.trim)
+S3method(as.data.frame, ebalance)
+S3method(as.data.frame, ebalance.trim)
+
+# tidyverse / broom integration: methods registered against `generics`
+# generics so that library(broom) (which re-exports them) picks them up.
+S3method(generics::tidy, ebalance)
+S3method(generics::tidy, ebalance.trim)
+S3method(generics::glance, ebalance)
+S3method(generics::glance, ebalance.trim)
+S3method(generics::augment, ebalance)
+S3method(generics::augment, ebalance.trim)
+
+# ggplot2 autoplot
+S3method(ggplot2::autoplot, ebalance)
+S3method(ggplot2::autoplot, ebalance.trim)

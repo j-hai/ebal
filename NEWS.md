@@ -1,3 +1,53 @@
+# ebal 0.3-0
+
+## New: alternative solver via autodiff
+
+* `ebalance()` gains a `method` argument: `"newton"` (default; the
+  classical Newton-Raphson solver, behavior unchanged from earlier
+  releases) and `"autodiff"` (a torch-based solver that uses BFGS on
+  gradients computed by automatic differentiation).
+* The `"autodiff"` path is contributed by Apoorva Lal, ported from his
+  `ebal` fork at <https://github.com/apoorvalal/ebal>. It is more
+  stable when the optimization landscape is poorly conditioned and
+  scales better at large covariate counts. Newton remains the default
+  because it is faster on the small problems that dominate everyday
+  use; users opt into autodiff with `method = "autodiff"`.
+* `torch` is in `Suggests:`, not `Imports:`. Users who do not use the
+  autodiff path see no change to their installation footprint. The
+  first call to a `torch` function in a session may require
+  `torch::install_torch()` to download libtorch.
+* Apoorva Lal added as `aut` on the package for this contribution.
+
+## New: tidyverse-friendly extractors
+
+* `tidy(fit)` returns a per-covariate balance table (means, raw and
+  weighted differences, standardized differences) as a `data.frame`,
+  ready for `dplyr` / `kable` / `gt` consumption. Methods registered
+  against the `generics` package generics, so `library(broom)` makes
+  them discoverable.
+* `glance(fit)` returns a one-row summary: `n_treated`, `n_control`,
+  `n_moments`, `sum_weights`, `ess_kish` (Kish effective sample size),
+  `max_weight`, `max_weight_ratio`, `maxdiff`, `converged`. For
+  `ebalance.trim` objects the row also carries `trim_feasible`.
+* `augment(fit, data)` joins per-unit weights back to the original
+  data frame as `.weight` (treated units get 1; controls get the
+  ebalance weight). Drop-in for `lm(..., weights = .weight)`.
+* `as.data.frame(fit)` returns the balance table directly (alias for
+  `tidy()`'s output).
+
+## New: ggplot2 Love plot
+
+* `autoplot(fit)` returns a `ggplot` object showing the standardized
+  difference of each covariate before vs. after weighting, with
+  reference lines at 0 and ±0.1. Discoverable via `library(ggplot2)`;
+  `ggplot2` is in `Suggests:`.
+
+## New: vignette
+
+* `vignette("ebal-quickstart", package = "ebal")` walks through the
+  Lalonde PSID example end-to-end with both solver methods, the
+  weighted regression follow-up, and the new tidy/autoplot output.
+
 # ebal 0.2.1
 
 ## Internal restructure (no user-visible change)
