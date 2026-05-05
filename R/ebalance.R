@@ -34,8 +34,19 @@ ebalance <- function(Treatment,
     if (is.null(treat)) {
       stop("formula has no response (left-hand side); expected treat ~ x1 + x2 + ...")
     }
+    # Reject NAs explicitly, here, to match the matrix-interface
+    # contract. Without this, model.matrix() below silently drops the
+    # NA rows from X (default na.action) while model.response() above
+    # kept them via na.pass — the result was a length-mismatch error
+    # ("length(Treatment) != nrow(X)") instead of a clear "missing data"
+    # message. Build the matrix from the same model frame to lock the
+    # row alignment in either direction.
+    if (any(is.na(treat)))
+      stop("Treatment contains missing data")
+    if (any(is.na(mf)))
+      stop("X contains missing data")
 
-    Xmat <- model.matrix(formula, data = data)
+    Xmat <- model.matrix(formula, data = mf)
     if ("(Intercept)" %in% colnames(Xmat)) {
       Xmat <- Xmat[, colnames(Xmat) != "(Intercept)", drop = FALSE]
     }
@@ -48,6 +59,15 @@ ebalance <- function(Treatment,
   if (is.null(X)) {
     stop("'X' is required when 'Treatment' is not a formula")
   }
+  # NA checks first: any non-finite Treatment value would otherwise
+  # poison the binary check below (NA != 1 returns NA, which then
+  # triggers "missing value where TRUE/FALSE needed" in the if()).
+  if (sum(is.na(Treatment)) > 0) {
+    stop("Treatment contains missing data")
+  }
+  if (sum(is.na(X)) > 0) {
+    stop("X contains missing data")
+  }
   if (sum(Treatment != 1 & Treatment != 0) > 0) {
     stop("Treatment indicator ('Treatment') must be a logical variable, TRUE (1) or FALSE (0)")
   }
@@ -59,12 +79,6 @@ ebalance <- function(Treatment,
   Treatment <- as.numeric(Treatment)
   X <- as.matrix(X)
 
-  if (sum(is.na(X)) > 0) {
-    stop("X contains missing data")
-  }
-  if (sum(is.na(Treatment)) > 0) {
-    stop("Treatment contains missing data")
-  }
   if (length(Treatment) != nrow(X)) {
     stop("length(Treatment) != nrow(X)")
   }
@@ -84,6 +98,15 @@ ebalance <- function(Treatment,
   }
   if (length(base.weight) != ncontrols) {
     stop("length(base.weight) !=  number of controls  sum(Treatment==0)")
+  }
+  if (any(is.na(base.weight)) || any(!is.finite(base.weight))) {
+    stop("base.weight must be finite (no NA / NaN / Inf)")
+  }
+  if (any(base.weight < 0)) {
+    stop("base.weight must be non-negative")
+  }
+  if (sum(base.weight) <= 0) {
+    stop("base.weight must have positive sum")
   }
 
   co.x <- X[Treatment == 0, , drop = FALSE]

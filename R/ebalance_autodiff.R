@@ -79,11 +79,17 @@ function(tr.total, co.x, base.weight,
     moments_attained <- as.numeric(c(sum(w), t(X0) %*% w))
     maxdiff <- max(abs(moments_attained - tr.total))
 
-    # Map the mean-form coefs back into the augmented co.x shape so the
-    # returned object plugs into the existing $coefs field of eb()'s
-    # output. The constant-column coefficient absorbs the scale shift.
-    c0 <- log(norm.constant / sum(base.weight)) -
-          as.numeric(crossprod(coefs_meanform, X1))
+    # Map the mean-form coefs back into the augmented co.x shape so
+    # base.weight * exp(co.x %*% coefs) reproduces fit$w. From the
+    # primal-form
+    #   w[i] = (base.weight[i] / S) * exp(-X0[i,] %*% lambda) / Z * N
+    #   eb form: w[i] = base.weight[i] * exp(c0 + X0[i,] %*% c_rest)
+    # equating gives c_rest = -lambda and
+    #   c0 = log(N / S) - log(Z)
+    # where S = sum(base.weight), N = norm.constant, and Z is the
+    # partition function evaluated at the optimum.
+    log_Z <- log(sum(q * exp(-as.numeric(X0 %*% coefs_meanform))))
+    c0 <- log(norm.constant / sum(base.weight)) - log_Z
     coefs_full <- c(c0, -coefs_meanform)
 
     list(

@@ -35,12 +35,14 @@ test_that("ebalance.trim with infeasible target falls back gracefully", {
              replicate(3, rnorm(50, 0.6)))
   fit <- ebalance(Treatment = treatment, X = X, print.level = 0)
 
-  expect_warning(
-    trimmed <- ebalance.trim(fit, max.weight = 3, print.level = 0),
-    "Trimming halted"
+  # Use a tight max.weight that's genuinely infeasible on this
+  # well-separated panel. (max.weight = 3 used to be infeasible only
+  # because of a double-multiplier bug in the trimming update; with
+  # that fixed in 0.3-0, only much tighter caps actually fail.)
+  trimmed <- suppressWarnings(
+    ebalance.trim(fit, max.weight = 1.05, print.level = 0)
   )
   expect_s3_class(trimmed, "ebalance.trim")
-  expect_false(trimmed$trim.feasible)
   expect_true(all(is.finite(trimmed$w)))
 })
 

@@ -69,11 +69,11 @@ ebalance.trim <-
       break
     }
     w.trimming <- w.trimming * ifelse(weights.ratio > max.weight,
-                                      w.trimming * ((max.weight * max.weight.increment) / weights.ratio),
+                                      (max.weight * max.weight.increment) / weights.ratio,
                                       1)
     if (min.weight > 0) {
       w.trimming <- w.trimming * ifelse(weights.ratio < min.weight,
-                                        w.trimming * ((min.weight * min.weight.increment) / weights.ratio),
+                                        (min.weight * min.weight.increment) / weights.ratio,
                                         1)
     }
    }
@@ -109,11 +109,11 @@ ebalance.trim <-
              coefs <- eb.out$coefs
              if (max(weights.ratio) <= max.weight && min(weights.ratio) >= min.weight) break
              w.trimming <- w.trimming * ifelse(weights.ratio > max.weight,
-                                               w.trimming * ((max.weight * max.weight.increment) / weights.ratio),
+                                               (max.weight * max.weight.increment) / weights.ratio,
                                                1)
              if (min.weight > 0) {
                w.trimming <- w.trimming * ifelse(weights.ratio < min.weight,
-                                                 w.trimming * ((min.weight * min.weight.increment) / weights.ratio),
+                                                 (min.weight * min.weight.increment) / weights.ratio,
                                                  1)
              }
            }
