@@ -24,8 +24,8 @@ Convenience methods for inspecting and using objects returned by
 \method{summary}{ebalance.trim}(object, \dots)
 \method{print}{summary.ebalance}(x, digits = 4, \dots)
 \method{print}{summary.ebalance.trim}(x, digits = 4, \dots)
-\method{plot}{ebalance}(x, abs.values = TRUE,
-     xlab = NULL, main = NULL, \dots)
+\method{plot}{ebalance}(x, type = c("balance", "weights"),
+     abs.values = TRUE, xlab = NULL, main = NULL, \dots)
 \method{plot}{ebalance.trim}(x, \dots)
 \method{weights}{ebalance}(object, \dots)
 \method{weights}{ebalance.trim}(object, \dots)
@@ -33,8 +33,14 @@ Convenience methods for inspecting and using objects returned by
 
 \arguments{
   \item{x, object}{An object of class \code{ebalance} or \code{ebalance.trim}.}
+  \item{type}{For \code{plot}: \code{"balance"} (default) draws a Love plot
+    of standardized differences before and after weighting;
+    \code{"weights"} draws a histogram of the per-unit weights with the
+    Kish ESS and max-weight ratio in the subtitle. Under estimand
+    \code{"ATE"}, the \code{"weights"} panel facets by side.}
   \item{abs.values}{Logical. If \code{TRUE} (default) the Love plot shows
-    absolute standardized differences; if \code{FALSE} signed.}
+    absolute standardized differences; if \code{FALSE} signed. Ignored
+    when \code{type = "weights"}.}
   \item{xlab, main}{Standard graphical arguments passed to \code{plot()}.}
   \item{digits}{Number of digits used when printing the summary table.}
   \item{\dots}{Additional arguments. Currently unused for \code{print},

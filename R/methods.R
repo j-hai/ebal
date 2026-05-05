@@ -155,7 +155,7 @@ summary.ebalance <- function(object, ...) {
          "in the result; refit with the current package version to use ",
          "summary().")
   }
-  bal <- .balance_table(object$Treatment, object$X, weights(object))
+  bal <- balance_table(object)
   out <- list(
     call.info = list(n.treated  = sum(object$Treatment == 1),
                      n.controls = sum(object$Treatment == 0),
@@ -173,7 +173,7 @@ summary.ebalance.trim <- function(object, ...) {
          "in the result; refit with the current package version to use ",
          "summary().")
   }
-  bal <- .balance_table(object$Treatment, object$X, weights(object))
+  bal <- balance_table(object)
   out <- list(
     call.info = list(n.treated      = sum(object$Treatment == 1),
                      n.controls     = sum(object$Treatment == 0),
@@ -187,13 +187,25 @@ summary.ebalance.trim <- function(object, ...) {
   out
 }
 
+.print_balance_df <- function(bal, digits) {
+  # balance_table() returns a data frame with a character `variable`
+  # column; move it to row.names before rounding the numeric columns
+  # so print() lays out cleanly.
+  rn  <- bal$variable
+  num <- bal[, setdiff(names(bal), "variable"), drop = FALSE]
+  num <- as.data.frame(lapply(num, function(col)
+    if (is.numeric(col)) round(col, digits = digits) else col))
+  rownames(num) <- rn
+  print(num)
+}
+
 print.summary.ebalance <- function(x, digits = 4, ...) {
   ci <- x$call.info
   cat("Entropy balancing summary\n")
   cat(sprintf("  Treated:   %d   Controls: %d   Converged: %s   max moment deviation: %.3g\n",
               ci$n.treated, ci$n.controls, ci$converged, ci$maxdiff))
   cat("\nBalance table (means and standardized differences):\n\n")
-  print(round(x$balance, digits = digits))
+  .print_balance_df(x$balance, digits)
   invisible(x)
 }
 
@@ -205,7 +217,7 @@ print.summary.ebalance.trim <- function(x, digits = 4, ...) {
   cat(sprintf("  Trim feasible: %s   max weight ratio: %.3f\n",
               ci$trim.feasible, ci$max.weight.ratio))
   cat("\nBalance table (means and standardized differences):\n\n")
-  print(round(x$balance, digits = digits))
+  .print_balance_df(x$balance, digits)
   invisible(x)
 }
 

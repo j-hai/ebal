@@ -20,8 +20,8 @@
 # all consume it (or its internal counterpart .balance_table()).
 
 balance_table <- function(fit) {
-  if (!inherits(fit, "ebalance"))
-    stop("balance_table() requires an ebalance object")
+  if (!inherits(fit, c("ebalance", "ebalance.trim")))
+    stop("balance_table() requires an ebalance or ebalance.trim object")
   if (is.null(fit$Treatment) || is.null(fit$X))
     stop("\n balance_table() requires the Treatment vector and X matrix on\n the ebalance object (added in 0.2.0). Refit with the current\n ebalance() to enable this method. \n")
   ag <- .active_group(fit)

@@ -9,9 +9,12 @@
 test_that("tidy.ebalance returns a per-covariate balance table", {
   fit <- .fit_toy()
   out <- tidy.ebalance(fit)
-  expect_named(out, c("term", "mean_treated", "mean_control",
-                      "mean_control_w", "diff_pre", "diff_post",
-                      "std_diff_pre", "std_diff_post"))
+  expect_named(out, c("term",
+                      "mean_treated_pre", "mean_treated_post",
+                      "mean_control_pre", "mean_control_post",
+                      "diff_pre", "diff_post",
+                      "std_diff_pre", "std_diff_post",
+                      "pct_reduction"))
   expect_equal(nrow(out), 3L)
   # Post-weighting standardized differences should be much smaller
   expect_true(all(abs(out$std_diff_post) <= abs(out$std_diff_pre) + 1e-6))
@@ -58,8 +61,11 @@ test_that("augment.ebalance joins .weight back to the data", {
 test_that("as.data.frame.ebalance returns the tidy balance table", {
   fit <- .fit_toy()
   out <- as.data.frame(fit)
-  expect_named(out, c("term", "mean_treated", "mean_control",
-                      "mean_control_w", "diff_pre", "diff_post",
-                      "std_diff_pre", "std_diff_post"))
+  expect_named(out, c("variable",
+                      "mean_treated_pre", "mean_treated_post",
+                      "mean_control_pre", "mean_control_post",
+                      "diff_pre", "diff_post",
+                      "std_diff_pre", "std_diff_post",
+                      "pct_reduction"))
   expect_equal(nrow(out), 3L)
 })

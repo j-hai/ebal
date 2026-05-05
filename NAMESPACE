@@ -1,7 +1,8 @@
 importFrom("stats", "model.frame", "model.matrix", "model.response",
            "na.pass", "optim", "optimize", "var", "weighted.mean",
            "weights")
-importFrom("graphics", "abline", "axis", "legend", "par", "points")
+importFrom("graphics", "abline", "axis", "hist", "legend", "mtext",
+           "par", "points")
 importFrom("methods", "is")
 
 export(eb,

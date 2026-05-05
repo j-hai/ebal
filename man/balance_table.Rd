@@ -7,7 +7,7 @@ moments for every column of \code{X}, under whichever estimand the
 \code{\link{ebalance}} fit was built for. This is the canonical
 balance representation for the package; \code{summary()},
 \code{\link[generics]{tidy}}, \code{\link[generics]{glance}},
-\code{\link{plot.ebalance}}, and \code{\link{autoplot.ebalance}} all
+\code{\link{plot.ebalance}}, and \code{autoplot()} (when \pkg{ggplot2} is available) all
 read from the same underlying numbers.
 }
 \usage{
@@ -28,7 +28,7 @@ A \code{data.frame} with one row per covariate and the following columns:
 }
 The estimand is also carried as \code{attr(out, "estimand")}.
 }
-\seealso{\code{\link{ebalance}}, \code{\link{summary.ebalance}}, \code{\link{plot.ebalance}}, \code{\link{autoplot.ebalance}}.}
+\seealso{\code{\link{ebalance}}, \code{\link{summary.ebalance}}, \code{\link{plot.ebalance}}.}
 \examples{
 \donttest{
 set.seed(1)

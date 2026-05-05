@@ -131,10 +131,11 @@ Sometimes the entropy-balancing weights have a heavy right tail
 (`max(w) / mean(w)` in the dozens). Two options:
 
 ```{r trim}
-glance.ebalance(fit)[, c("ess_control", "max_weight_ratio_control")]
+library(generics)
+glance(fit)[, c("ess_control", "max_weight_ratio_control")]
 
 trimmed <- ebalance.trim(fit)        # automatic minimization
-glance.ebalance.trim(trimmed)[, c("ess_control", "max_weight_ratio_control")]
+glance(trimmed)[, c("ess_control", "max_weight_ratio_control")]
 ```
 
 `ebalance.trim()` returns an object with the same shape, so

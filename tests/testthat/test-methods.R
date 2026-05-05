@@ -43,12 +43,15 @@ test_that("summary.ebalance returns balance table with expected columns", {
   s <- summary(fit)
   expect_s3_class(s, "summary.ebalance")
   expect_s3_class(s$balance, "data.frame")
-  expected_cols <- c("mean.Tr", "mean.Co.pre", "mean.Co.post",
-                     "diff.pre", "diff.post",
-                     "std.diff.pre", "std.diff.post")
+  expected_cols <- c("variable",
+                     "mean_treated_pre", "mean_treated_post",
+                     "mean_control_pre", "mean_control_post",
+                     "diff_pre", "diff_post",
+                     "std_diff_pre", "std_diff_post",
+                     "pct_reduction")
   expect_true(all(expected_cols %in% colnames(s$balance)))
   # post-weighting standardized differences should be near zero
-  expect_true(all(abs(s$balance$std.diff.post) < 0.05))
+  expect_true(all(abs(s$balance$std_diff_post) < 0.05))
 })
 
 test_that("summary.ebalance.trim includes trim.feasible", {
