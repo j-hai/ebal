@@ -72,22 +72,35 @@ function(object)
     long <- do.call(rbind, rows)
     long$side <- factor(long$side, levels = c("controls", "treated"))
 
+    # Plain-language diagnostic subtitle: ESS as fraction of side n,
+    # max weight as a multiple of the side mean. Two short lines instead
+    # of an opaque single line of solver internals.
     .ess   <- function(w) sum(w)^2 / sum(w^2)
     .ratio <- function(w) max(w) / mean(w)
     diag_lines <- vapply(levels(long$side), function(s) {
       w <- long$weight[long$side == s]
       if (length(w) == 0) return(NA_character_)
-      sprintf("%s: ESS = %.0f / %d, max/mean = %.2f",
+      sprintf("%s: effective sample size = %.0f of %d  |  largest weight is %.1fx the average",
               s, .ess(w), length(w), .ratio(w))
     }, character(1))
-    sub <- paste(diag_lines[!is.na(diag_lines)], collapse = "   |   ")
+    sub <- paste(diag_lines[!is.na(diag_lines)], collapse = "\n")
+
+    title <- sprintf("Are the weights concentrated?  (estimand: %s)",
+                     ag$estimand)
+    caption <- "A vertical bar at weight = 1 marks the uniform-weighting baseline. Weights well above 1 indicate a unit is over-represented; well below 1, under-represented."
 
     p <- ggplot2::ggplot(long, ggplot2::aes(x = .data$weight)) +
-      ggplot2::geom_histogram(bins = 30, fill = "grey85", color = "grey40") +
-      ggplot2::labs(x = "Unit weight", y = "Count",
-                    title = sprintf("Weight distribution (%s)", ag$estimand),
-                    subtitle = sub) +
-      ggplot2::theme_minimal()
+      ggplot2::geom_histogram(bins = 30, fill = "grey80", color = "grey40") +
+      ggplot2::geom_vline(xintercept = 1, linetype = "dashed",
+                          color = "grey40") +
+      ggplot2::labs(x = "Unit weight", y = "Number of units",
+                    title = title, subtitle = sub, caption = caption) +
+      ggplot2::theme_minimal() +
+      ggplot2::theme(plot.subtitle = ggplot2::element_text(size = 9,
+                                                            color = "grey30"),
+                     plot.caption  = ggplot2::element_text(size = 8,
+                                                            color = "grey50",
+                                                            hjust = 0))
     if (length(unique(long$side)) > 1) {
       p <- p + ggplot2::facet_wrap(~ side, ncol = 2, scales = "free")
     }

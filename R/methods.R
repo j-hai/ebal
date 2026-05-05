@@ -300,7 +300,8 @@ plot.ebalance.trim <- function(x, ...) plot.ebalance(x, ...)
 .plot_ebalance_weights <- function(x, main = NULL, xlab = NULL, ...) {
   ag <- .active_group(x)
   if (is.null(main)) {
-    main <- sprintf("Weight distribution (%s)", ag$estimand)
+    main <- sprintf("Are the weights concentrated?  (estimand: %s)",
+                    ag$estimand)
   }
   if (is.null(xlab)) xlab <- "Unit weight"
 
@@ -312,29 +313,34 @@ plot.ebalance.trim <- function(x, ...) plot.ebalance(x, ...)
 
   .ess <- function(w) sum(w)^2 / sum(w^2)
   .ratio <- function(w) max(w) / mean(w)
-  sub <- paste(vapply(names(active), function(side) {
+  sub_lines <- vapply(names(active), function(side) {
     w <- active[[side]]
-    sprintf("%s: ESS = %.0f / %d, max/mean = %.2f",
+    sprintf("%s: effective sample size = %.0f of %d  |  largest weight is %.1fx the average",
             side, .ess(w), length(w), .ratio(w))
-  }, character(1)), collapse = "   |   ")
+  }, character(1))
 
   if (length(active) == 1) {
     op <- par(mar = c(5, 4, 4, 1))
     on.exit(par(op), add = TRUE)
     w <- active[[1]]
     hist(w, breaks = 30, main = main, xlab = xlab,
-         col = "grey85", border = "grey40", ...)
-    mtext(sub, side = 3, line = 0.2, cex = 0.85, col = "grey30")
+         ylab = "Number of units",
+         col = "grey80", border = "grey40", ...)
+    abline(v = 1, lty = 2, col = "grey40")
+    mtext(sub_lines[1], side = 3, line = 0.2, cex = 0.85, col = "grey30")
   } else {
-    op <- par(mfrow = c(1, 2), mar = c(5, 4, 4, 1), oma = c(0, 0, 2, 0))
+    op <- par(mfrow = c(1, 2), mar = c(5, 4, 4, 1), oma = c(0, 0, 3, 0))
     on.exit(par(op), add = TRUE)
     for (side in names(active)) {
       hist(active[[side]], breaks = 30,
            main = paste(side, "weights"), xlab = xlab,
-           col = "grey85", border = "grey40", ...)
+           ylab = "Number of units",
+           col = "grey80", border = "grey40", ...)
+      abline(v = 1, lty = 2, col = "grey40")
     }
-    mtext(main, side = 3, line = 0, outer = TRUE, cex = 1.1, font = 2)
-    mtext(sub,  side = 3, line = -1.2, outer = TRUE, cex = 0.85, col = "grey30")
+    mtext(main, side = 3, line = 1.2, outer = TRUE, cex = 1.1, font = 2)
+    mtext(paste(sub_lines, collapse = "    "),
+          side = 3, line = -0.2, outer = TRUE, cex = 0.8, col = "grey30")
   }
   invisible(active)
 }
