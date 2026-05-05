@@ -51,7 +51,8 @@ plot(fit)           # Love plot of standardized differences
 
 # Use weights in a downstream regression
 df$w <- weights(fit)        # length nrow(df), 1 for treated, eb-weight for controls
-mod <- lm(y ~ treat, data = df, weights = w)   # if you have an outcome y
+df$y <- treatment + rnorm(nrow(df))            # toy outcome for the example
+mod  <- lm(y ~ treat, data = df, weights = w)
 ```
 
 ## Trimming extreme weights

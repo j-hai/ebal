@@ -202,9 +202,17 @@ weights.ebalance.trim <- function(object, ...) {
          "the current package version to use weights() at full length, or ",
          "read object$w for the controls-only vector.")
   }
+  estimand <- object$estimand %||% "ATT"
   out <- numeric(length(object$Treatment))
-  out[object$Treatment == 1] <- 1
-  out[object$Treatment == 0] <- object$w
+  if (estimand == "ATC") {
+    out[object$Treatment == 1] <- object$w
+    out[object$Treatment == 0] <- 1
+  } else {
+    # ATT (or unflagged legacy objects): treated = 1, controls = trimmed w.
+    # ATE is not supported by ebalance.trim() — see ebalance.trim.R.
+    out[object$Treatment == 1] <- 1
+    out[object$Treatment == 0] <- object$w
+  }
   out
 }
 

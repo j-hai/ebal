@@ -117,7 +117,15 @@ ebalance <- function(Treatment,
       constraint.tolerance = constraint.tolerance, print.level = print.level
     )
   } else {
-    # ATE: two solves, both targeting overall sample moments.
+    # ATE: two solves, both targeting overall sample moments. Each side's
+    # weights normalize to its own group n so weighted.mean(Y[T==t], w[T==t])
+    # gives the population-level mean for each group; passing a scalar
+    # norm.constant would override only one side and break that
+    # interpretation, so we reject it explicitly rather than silently
+    # accept an arg that has no scalar meaning here.
+    if (!is.null(norm.constant)) {
+      stop("norm.constant is not supported with estimand = \"ATE\"; the two sides normalize to ncontrols and ntreated respectively so weighted means recover population-level group means")
+    }
     overall_means <- colMeans(X)
     # Allow a list(control=, treated=) for separate base weights, or a
     # single vector that's interpreted as the control side (treated
@@ -267,6 +275,7 @@ ebalance <- function(Treatment,
   } else {
     .eb_autodiff(tr.total = tr.total, co.x = co.x,
                  base.weight = base.weight,
+                 coefs = coefs,
                  max.iterations = max.iterations,
                  constraint.tolerance = constraint.tolerance,
                  print.level = print.level)

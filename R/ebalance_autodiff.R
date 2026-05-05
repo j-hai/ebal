@@ -17,7 +17,7 @@
 # within solver tolerance.
 
 .eb_autodiff <-
-function(tr.total, co.x, base.weight,
+function(tr.total, co.x, base.weight, coefs = NULL,
          max.iterations = 200, constraint.tolerance = 1, print.level = 0)
   {
     if (!requireNamespace("torch", quietly = TRUE))
@@ -56,11 +56,19 @@ function(tr.total, co.x, base.weight,
     }
     loss_val <- function(lambda) as.numeric(ebal_loss(lambda))
 
-    # Zero-init: at lambda = 0 the loss equals log(sum(q)) = 0 (q is
-    # already normalized to sum 1) and the gradient is X1 - mean_q(X0)
-    # — i.e. the imbalance under the base distribution. BFGS converges
-    # quickly from there for well-conditioned problems.
-    par0 <- rep(0, ncol(X0))
+    # Initial seed. Default is zero (at lambda = 0 the loss equals
+    # log(sum(q)) = 0 since q sums to 1, and the gradient is the imbalance
+    # under the base distribution; BFGS converges quickly from there).
+    # If the caller passed eb()-form starting coefs (length = ncol(co.x);
+    # parameterizes weights = q * exp(co.x %*% coefs)), translate to the
+    # mean-form lambda used here. The eb-form covariate slope is c_rest
+    # = coefs[-1]; the autodiff form uses lambda with weights ∝ exp(-X0
+    # lambda), so lambda_seed = -c_rest. The constant entry coefs[1]
+    # only sets a scale that the autodiff path recovers from log(Z), so
+    # it's not needed here.
+    par0 <- if (is.null(coefs)) rep(0, ncol(X0)) else -as.numeric(coefs[-1])
+    if (length(par0) != ncol(X0))
+      stop("coefs has wrong length for the autodiff seed")
 
     res <- optim(par = par0, fn = loss_val, gr = loss_grad,
                  method = "BFGS",

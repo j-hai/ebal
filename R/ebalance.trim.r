@@ -156,7 +156,8 @@ z <- list(
           converged            = eb.out$converged,
           trim.feasible        = trim.feasible,
           Treatment            = ebalanceobj$Treatment,
-          X                    = ebalanceobj$X
+          X                    = ebalanceobj$X,
+          estimand             = estimand
     )
 
 class(z) <- "ebalance.trim"
