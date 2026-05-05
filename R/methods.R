@@ -8,6 +8,50 @@
 
 # ---- internal helpers -------------------------------------------------------
 
+# Resolve which side(s) of the panel carry the estimated weights for a
+# given ebalance fit. Returns a list with:
+#   $estimand        -- character: "ATT" / "ATC" / "ATE"
+#   $reweighted      -- character: "controls" / "treated" / "both"
+#   $w_treated       -- length-n_treated vector of fitted weights for the
+#                       treated side (rep(1, n_treated) when treated is the
+#                       reference side -- i.e. ATT)
+#   $w_control       -- analogous for the control side
+#   $w_full          -- length-n vector aligned to fit$Treatment
+# All print/summary/plot/balance/glance methods call this once at the top
+# instead of re-implementing the estimand branch each time.
+.active_group <- function(fit) {
+  estimand <- fit$estimand %||% "ATT"
+  Treatment <- fit$Treatment
+  if (is.null(Treatment))
+    stop("ebalance fit has no Treatment field; refit with the current package version")
+  n  <- length(Treatment)
+  it <- which(Treatment == 1)
+  ic <- which(Treatment == 0)
+  if (estimand == "ATT") {
+    w_treated <- rep(1, length(it))
+    w_control <- fit$w
+    reweighted <- "controls"
+  } else if (estimand == "ATC") {
+    w_treated <- fit$w
+    w_control <- rep(1, length(ic))
+    reweighted <- "treated"
+  } else {
+    w_treated <- fit$treated_solve$w
+    w_control <- fit$control_solve$w
+    reweighted <- "both"
+  }
+  w_full <- numeric(n)
+  w_full[it] <- w_treated
+  w_full[ic] <- w_control
+  list(estimand   = estimand,
+       reweighted = reweighted,
+       w_treated  = w_treated,
+       w_control  = w_control,
+       w_full     = w_full,
+       it         = it,
+       ic         = ic)
+}
+
 # Build a balance table comparing pre- and post-weighting moments
 # under a binary Treatment vector and a length-n weights_full vector.
 # Treatment-side and control-side post-weighting means are computed
@@ -49,28 +93,22 @@
 # ---- print methods ----------------------------------------------------------
 
 print.ebalance <- function(x, ...) {
-  estimand <- x$estimand %||% "ATT"
-  cat("Entropy balancing  (estimand: ", estimand, ")\n", sep = "")
+  ag <- .active_group(x)
+  cat("Entropy balancing  (estimand: ", ag$estimand, ")\n", sep = "")
   cat("---------------------------------\n")
-  ntreated  <- if (!is.null(x$Treatment)) sum(x$Treatment == 1) else NA
-  ncontrols <- if (!is.null(x$Treatment)) sum(x$Treatment == 0) else NA
-  if (estimand == "ATT") {
-    cat(sprintf("Treated:    %d\n", ntreated))
-    cat(sprintf("Controls:   %d (reweighted; sum of weights = %.3f)\n",
-                ncontrols, sum(x$w)))
-  } else if (estimand == "ATC") {
-    cat(sprintf("Treated:    %d (reweighted; sum of weights = %.3f)\n",
-                ntreated, sum(x$w)))
-    cat(sprintf("Controls:   %d\n", ncontrols))
-  } else {
-    cat(sprintf("Treated:    %d (reweighted; sum of weights = %.3f)\n",
-                ntreated, sum(x$treated_solve$w)))
-    cat(sprintf("Controls:   %d (reweighted; sum of weights = %.3f)\n",
-                ncontrols, sum(x$control_solve$w)))
-  }
-  nmom <- length(x$target.margins) - 1L  # subtract the norm.constant entry
+  reweighted_t <- ag$reweighted %in% c("treated", "both")
+  reweighted_c <- ag$reweighted %in% c("controls", "both")
+  cat(sprintf("Treated:    %d%s\n", length(ag$it),
+              if (reweighted_t)
+                sprintf(" (reweighted; sum of weights = %.3f)", sum(ag$w_treated))
+              else ""))
+  cat(sprintf("Controls:   %d%s\n", length(ag$ic),
+              if (reweighted_c)
+                sprintf(" (reweighted; sum of weights = %.3f)", sum(ag$w_control))
+              else ""))
+  nmom <- length(x$target.margins) - 1L
   cat(sprintf("Moments:    %d covariate moment(s) balanced\n", nmom))
-  if (estimand == "ATE") {
+  if (ag$estimand == "ATE") {
     cat(sprintf("Converged:  control = %s, treated = %s   (max deviation = %.3g)\n",
                 x$control_solve$converged, x$treated_solve$converged, x$maxdiff))
   } else {
@@ -83,22 +121,19 @@ print.ebalance <- function(x, ...) {
 }
 
 print.ebalance.trim <- function(x, ...) {
-  estimand <- x$estimand %||% "ATT"
-  cat("Entropy balancing (trimmed weights, estimand: ", estimand, ")\n", sep = "")
+  ag <- .active_group(x)
+  cat("Entropy balancing (trimmed weights, estimand: ", ag$estimand, ")\n", sep = "")
   cat("---------------------------------------------\n")
-  ntreated  <- if (!is.null(x$Treatment)) sum(x$Treatment == 1) else NA
-  ncontrols <- if (!is.null(x$Treatment)) sum(x$Treatment == 0) else NA
-  if (estimand == "ATC") {
-    # x$w is the trimmed weight vector for the *treated* side.
-    cat(sprintf("Treated:        %d (reweighted; sum of weights = %.3f)\n",
-                ntreated, sum(x$w)))
-    cat(sprintf("Controls:       %d\n", ncontrols))
-  } else {
-    # ATT (or unflagged legacy objects).
-    cat(sprintf("Treated:        %d\n", ntreated))
-    cat(sprintf("Controls:       %d (reweighted; sum of weights = %.3f)\n",
-                ncontrols %||% length(x$w), sum(x$w)))
-  }
+  reweighted_t <- ag$reweighted %in% c("treated", "both")
+  reweighted_c <- ag$reweighted %in% c("controls", "both")
+  cat(sprintf("Treated:        %d%s\n", length(ag$it),
+              if (reweighted_t)
+                sprintf(" (reweighted; sum of weights = %.3f)", sum(ag$w_treated))
+              else ""))
+  cat(sprintf("Controls:       %d%s\n", length(ag$ic),
+              if (reweighted_c)
+                sprintf(" (reweighted; sum of weights = %.3f)", sum(ag$w_control))
+              else ""))
   nmom <- length(x$target.margins) - 1L
   cat(sprintf("Moments:        %d covariate moment(s) balanced\n", nmom))
   cat(sprintf("Converged:      %s   (max moment deviation = %.3g)\n",
@@ -182,47 +217,11 @@ print.summary.ebalance.trim <- function(x, digits = 4, ...) {
 # svyglm(...), etc.
 
 weights.ebalance <- function(object, ...) {
-  if (is.null(object$Treatment)) {
-    stop("This ebalance object has no Treatment field; refit with the ",
-         "current package version to use weights() at full length, or ",
-         "read object$w for the controls-only vector.")
-  }
-  estimand <- object$estimand %||% "ATT"
-  out <- numeric(length(object$Treatment))
-  if (estimand == "ATT") {
-    # Controls reweighted; treated units carry weight 1.
-    out[object$Treatment == 1] <- 1
-    out[object$Treatment == 0] <- object$w
-  } else if (estimand == "ATC") {
-    # Treated reweighted; control units carry weight 1.
-    out[object$Treatment == 1] <- object$w
-    out[object$Treatment == 0] <- 1
-  } else {
-    # ATE: both groups carry estimated weights from their respective solves.
-    out[object$Treatment == 0] <- object$control_solve$w
-    out[object$Treatment == 1] <- object$treated_solve$w
-  }
-  out
+  .active_group(object)$w_full
 }
 
 weights.ebalance.trim <- function(object, ...) {
-  if (is.null(object$Treatment)) {
-    stop("This ebalance.trim object has no Treatment field; refit with ",
-         "the current package version to use weights() at full length, or ",
-         "read object$w for the controls-only vector.")
-  }
-  estimand <- object$estimand %||% "ATT"
-  out <- numeric(length(object$Treatment))
-  if (estimand == "ATC") {
-    out[object$Treatment == 1] <- object$w
-    out[object$Treatment == 0] <- 1
-  } else {
-    # ATT (or unflagged legacy objects): treated = 1, controls = trimmed w.
-    # ATE is not supported by ebalance.trim() — see ebalance.trim.R.
-    out[object$Treatment == 1] <- 1
-    out[object$Treatment == 0] <- object$w
-  }
-  out
+  .active_group(object)$w_full
 }
 
 # ---- plot methods -----------------------------------------------------------
@@ -231,20 +230,28 @@ weights.ebalance.trim <- function(object, ...) {
 # one row per covariate. Base graphics, no ggplot2 dependency.
 
 plot.ebalance <- function(x,
+                          type = c("balance", "weights"),
                           abs.values = TRUE,
                           xlab = NULL,
                           main = NULL,
                           ...) {
+  type <- match.arg(type)
+  if (is.null(x$Treatment) || is.null(x$X)) {
+    stop("plot() requires the Treatment and X fields, which are stored ",
+         "by the current package version. Refit to use plot().")
+  }
+
+  if (type == "weights") {
+    return(.plot_ebalance_weights(x, main = main, xlab = xlab, ...))
+  }
+
+  # type = "balance" -- the original Love plot.
   if (is.null(xlab)) {
     xlab <- if (abs.values) "Absolute standardized difference"
             else "Standardized difference"
   }
   if (is.null(main)) {
     main <- "Covariate balance (before vs. after entropy balancing)"
-  }
-  if (is.null(x$Treatment) || is.null(x$X)) {
-    stop("plot() requires the Treatment and X fields, which are stored ",
-         "by the current package version. Refit to use plot().")
   }
   bal <- .balance_table(x$Treatment, x$X, weights(x))
   pre  <- bal$std.diff.pre
@@ -262,8 +269,7 @@ plot.ebalance <- function(x,
        xlim = xlim, ylim = ylim,
        xlab = xlab, ylab = "", yaxt = "n", main = main, ...)
   axis(2, at = seq_len(k), labels = rownames(bal)[ord], las = 1)
-  if (abs.values) abline(v = 0, col = "grey80")
-  else            abline(v = 0, col = "grey80")
+  abline(v = 0, col = "grey80")
   points(pre[ord],  seq_len(k), pch = 1, col = "black")
   points(post[ord], seq_len(k), pch = 19, col = "darkblue")
   legend("topright",
@@ -274,3 +280,49 @@ plot.ebalance <- function(x,
 }
 
 plot.ebalance.trim <- function(x, ...) plot.ebalance(x, ...)
+
+# Internal: weight-distribution plot. Histogram(s) of the unit weights
+# on whichever side(s) carry estimated weights. Subtitle reports the
+# Kish ESS and max-weight ratio so the reader can see at a glance
+# whether the fit is concentrated on a few units.
+.plot_ebalance_weights <- function(x, main = NULL, xlab = NULL, ...) {
+  ag <- .active_group(x)
+  if (is.null(main)) {
+    main <- sprintf("Weight distribution (%s)", ag$estimand)
+  }
+  if (is.null(xlab)) xlab <- "Unit weight"
+
+  active <- switch(ag$reweighted,
+                   controls = list(controls = ag$w_control),
+                   treated  = list(treated = ag$w_treated),
+                   both     = list(controls = ag$w_control,
+                                   treated  = ag$w_treated))
+
+  .ess <- function(w) sum(w)^2 / sum(w^2)
+  .ratio <- function(w) max(w) / mean(w)
+  sub <- paste(vapply(names(active), function(side) {
+    w <- active[[side]]
+    sprintf("%s: ESS = %.0f / %d, max/mean = %.2f",
+            side, .ess(w), length(w), .ratio(w))
+  }, character(1)), collapse = "   |   ")
+
+  if (length(active) == 1) {
+    op <- par(mar = c(5, 4, 4, 1))
+    on.exit(par(op), add = TRUE)
+    w <- active[[1]]
+    hist(w, breaks = 30, main = main, xlab = xlab,
+         col = "grey85", border = "grey40", ...)
+    mtext(sub, side = 3, line = 0.2, cex = 0.85, col = "grey30")
+  } else {
+    op <- par(mfrow = c(1, 2), mar = c(5, 4, 4, 1), oma = c(0, 0, 2, 0))
+    on.exit(par(op), add = TRUE)
+    for (side in names(active)) {
+      hist(active[[side]], breaks = 30,
+           main = paste(side, "weights"), xlab = xlab,
+           col = "grey85", border = "grey40", ...)
+    }
+    mtext(main, side = 3, line = 0, outer = TRUE, cex = 1.1, font = 2)
+    mtext(sub,  side = 3, line = -1.2, outer = TRUE, cex = 0.85, col = "grey30")
+  }
+  invisible(active)
+}

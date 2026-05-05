@@ -116,19 +116,36 @@ method.
 
 \value{
 A list of class \code{ebalance} with the following elements:
-  \item{target.margins}{Target moments computed from the treatment group.}
-  \item{co.xdata}{Covariate data from the control group (with intercept column).}
-  \item{w}{Control-group weights assigned by entropy balancing (length = number of controls).}
-  \item{coefs}{Coefficients from the reweighting algorithm.}
-  \item{maxdiff}{Maximum deviation between reweighted moments and targets.}
-  \item{norm.constant}{Normalizing constant used.}
+  \item{target.margins}{Target moments. For \code{"ATT"} these are the treated-group totals (length = number of moments + 1, with the leading entry equal to \code{norm.constant}). For \code{"ATC"} these are the control-group totals. For \code{"ATE"} the field mirrors the control-side solve; the treated-side targets live under \code{$treated_solve$target.margins}.}
+  \item{co.xdata}{Covariate data for the side that is being reweighted (with leading intercept column). Controls for \code{"ATT"} (and the control-side solve under \code{"ATE"}); treated for \code{"ATC"}.}
+  \item{w}{Estimated weights on the reweighted side. Length = number of controls for \code{"ATT"} and \code{"ATE"}; length = number of treated for \code{"ATC"}. To get a length-n vector aligned to \code{Treatment}, use \code{\link[=weights.ebalance]{weights(fit)}} (this routes correctly for every estimand and is the recommended access pattern).}
+  \item{coefs}{Coefficients from the reweighting algorithm for the side carried in \code{$w}. \code{base.weight * exp(co.xdata \%*\% coefs)} reproduces \code{$w}.}
+  \item{maxdiff}{Maximum deviation between reweighted moments and targets. For \code{"ATE"}, the worse of the two side-solves.}
+  \item{norm.constant}{Normalizing constant used. For \code{"ATT"} defaults to the number of treated, for \code{"ATC"} to the number of controls. For \code{"ATE"} this is a list \code{list(control = ncontrols, treated = ntreated)} (the argument is not user-settable for ATE).}
   \item{constraint.tolerance}{Tolerance level used for the balance constraints.}
   \item{max.iterations}{Maximum number of iterations used.}
-  \item{base.weight}{Base weight used.}
+  \item{base.weight}{Base weight used. For \code{"ATT"} / \code{"ATC"} a length-(reweighted side) vector. For \code{"ATE"} a list \code{list(control = ..., treated = ...)}.}
   \item{print.level}{Print level used.}
-  \item{converged}{Logical flag indicating convergence within tolerance.}
+  \item{converged}{Logical flag indicating convergence within tolerance. For \code{"ATE"}, \code{TRUE} only when both side solves converged.}
   \item{Treatment}{The treatment indicator vector as supplied (length = number of observations).}
   \item{X}{The covariate matrix as supplied.}
+  \item{estimand}{The estimand the fit was built for: \code{"ATT"}, \code{"ATC"}, or \code{"ATE"}.}
+  \item{control_solve, treated_solve}{(\code{"ATE"} only.) Per-side solves carrying their own \code{w}, \code{coefs}, \code{target.margins}, \code{co.xdata}, \code{maxdiff}, \code{converged}.}
+}
+\section{Slot fields by estimand}{
+The same field names mean different things across estimands. The
+table below summarizes the per-estimand semantics so you can read
+\code{fit$w} / \code{weights(fit)} without having to remember which
+side was reweighted:
+
+\tabular{llll}{
+                 \tab \strong{ATT}                          \tab \strong{ATC}                          \tab \strong{ATE} \cr
+\code{$w}        \tab control weights (length n_C)          \tab treated weights (length n_T)          \tab control weights (mirrors \code{$control_solve$w}) \cr
+\code{weights(fit)} \tab length n: treated = 1, controls = \code{$w} \tab length n: treated = \code{$w}, controls = 1 \tab length n: each side carries its solve's weights \cr
+\code{$target.margins} \tab treated-group totals     \tab control-group totals      \tab control-side targets (treated-side at \code{$treated_solve$target.margins}) \cr
+\code{$norm.constant}  \tab scalar (default n_T)    \tab scalar (default n_C)      \tab \code{list(control=n_C, treated=n_T)} (not user-settable) \cr
+\code{$base.weight}    \tab length n_C              \tab length n_T                \tab \code{list(control=, treated=)} \cr
+}
 }
 
 \references{
@@ -144,6 +161,24 @@ Kullback, S. (1959), Information Theory and Statistics, Wiley, NY.
 }
 
 \author{Jens Hainmueller}
+
+\section{Formula interface examples}{
+The formula interface accepts anything the standard \code{\link[stats]{model.matrix}} machinery understands. The intercept column is dropped automatically. Examples:
+
+\preformatted{
+# Quadratic and interaction terms
+ebalance(treat ~ age + I(age^2) + educ + income, data = df)
+ebalance(treat ~ age * educ + income, data = df)
+
+# Categorical predictors expand into dummies (k - 1 levels by default)
+ebalance(treat ~ factor(region) + age + income, data = df)
+
+# Combinations
+ebalance(treat ~ factor(region) + age * educ + I(income^2), data = df)
+}
+
+For balancing higher moments mechanically (means, variances, covariances of the raw covariates) without specifying the formula by hand, see \code{\link{matrixmaker}} and \code{\link{getsquares}}.
+}
 
 \seealso{
 \code{\link{ebalance.trim}} for trimming weights, and the

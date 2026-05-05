@@ -28,7 +28,10 @@ Suggests:
     rmarkdown,
     torch,
     ggplot2,
-    generics
+    generics,
+    sandwich,
+    lmtest,
+    survey
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 URL: https://web.stanford.edu/~jhain/, https://github.com/j-hai/ebal

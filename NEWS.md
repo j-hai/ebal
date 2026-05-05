@@ -1,5 +1,52 @@
 # ebal 0.3-0
 
+## New: `balance_table()` exported
+
+* `balance_table(fit)` returns a tidy per-covariate balance table with
+  columns `variable`, `mean_treated_pre`, `mean_treated_post`,
+  `mean_control_pre`, `mean_control_post`, `diff_pre`, `diff_post`,
+  `std_diff_pre`, `std_diff_post`, `pct_reduction`. Carries
+  `attr(out, "estimand")`. The table is the canonical balance
+  representation for the package; `summary()`, `tidy()`, `plot()`,
+  and `autoplot()` all read from it.
+
+## New: weight-distribution plot
+
+* `plot(fit, type = "weights")` and `autoplot(fit, type = "weights")`
+  show histograms of the per-unit weights with the Kish ESS and
+  max-weight ratio in the subtitle. `type = "balance"` (default) is
+  the original Love plot.
+
+## Enriched `glance()`
+
+* `glance(fit)` now reports per-side ESS / max-weight diagnostics:
+  `ess_control`, `ess_treated`, `max_weight_control`,
+  `max_weight_treated`, `max_weight_ratio_control`,
+  `max_weight_ratio_treated`. Also reports
+  `max_abs_std_diff_pre` and `max_abs_std_diff_post` so the row is a
+  one-glance "is this fit usable?" summary.
+
+## API clarity
+
+* Internal helper `.active_group(fit)` resolves the per-estimand side
+  semantics in one place; `weights()`, `print()`, `glance()`, and the
+  plot/autoplot/balance-table functions all route through it instead
+  of re-implementing the estimand branch.
+* `?ebalance` documents what `$w`, `weights(fit)`, `$target.margins`,
+  `$norm.constant`, and `$base.weight` mean per estimand.
+* `?ebalance` adds a section of formula-interface examples
+  (`I(age^2)`, interactions, `factor(region)`).
+
+## New vignettes
+
+* `vignette("estimands", package = "ebal")` walks through ATT / ATC /
+  ATE side by side: what gets reweighted, how `weights(fit)` shape
+  changes, how to read the diagnostics.
+* `vignette("outcome-models", package = "ebal")` shows the standard
+  downstream-regression workflow: weighted `lm()`, robust SEs via
+  `sandwich`/`lmtest` (in Suggests), survey-style inference, and when
+  to add regression adjustment for a doubly-robust estimator.
+
 ## New: ATE / ATC estimands
 
 * `ebalance()` gains an `estimand` argument: `"ATT"` (default; original

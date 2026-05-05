@@ -1,0 +1,151 @@
+---
+title: "Outcome models with ebalance weights"
+author: "Jens Hainmueller"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Outcome models with ebalance weights}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.5,
+  dpi = 96
+)
+set.seed(20260505)
+```
+
+This vignette shows how to plug `ebalance()` weights into common
+outcome models. The pattern is almost always the same:
+
+1. Build the weights with `ebalance()`.
+2. Attach them to the data via `weights(fit)`.
+3. Pass them to a downstream regression with `weights = w`.
+4. Use a heteroskedasticity-robust variance estimator for inference.
+
+```{r setup}
+library(ebal)
+```
+
+## A simulated example
+
+```{r data}
+set.seed(20260505)
+n <- 1000
+X <- data.frame(
+  x1 = rnorm(n),
+  x2 = rbinom(n, 1, 0.4),
+  x3 = rnorm(n)
+)
+# Selection on x1, x2: treatment more likely when x1 > 0 or x2 = 1
+ps <- plogis(0.6 * X$x1 + 1.2 * X$x2 - 0.5)
+treat <- rbinom(n, 1, ps)
+# True ATT = +2; outcome depends on x1 too
+y <- 1 + 0.7 * X$x1 + 0.5 * X$x2 + 2 * treat + rnorm(n, sd = 1)
+df <- data.frame(treat = treat, y = y, X)
+
+# Naive ATT
+mean(df$y[df$treat == 1]) - mean(df$y[df$treat == 0])
+```
+
+The naive ATT is biased because covariates are unbalanced:
+
+```{r raw-balance}
+rbind(
+  treated = colMeans(X[treat == 1, ]),
+  control = colMeans(X[treat == 0, ])
+)
+```
+
+## Fit
+
+```{r fit}
+fit <- ebalance(treat ~ x1 + x2 + x3, data = df)
+df$w <- weights(fit)
+```
+
+## Weighted `lm()` with robust SEs
+
+The point estimate comes straight from a weighted regression:
+
+```{r weighted-lm}
+mod <- lm(y ~ treat, data = df, weights = w)
+coef(mod)
+```
+
+Default `lm()` standard errors are wrong here because the weights
+induce heteroskedasticity. Use `sandwich::vcovHC()` (or `vcovCL()`
+if you have a clustering variable):
+
+```{r robust-se, eval = requireNamespace("sandwich", quietly = TRUE) && requireNamespace("lmtest", quietly = TRUE)}
+library(sandwich); library(lmtest)
+coeftest(mod, vcov = vcovHC(mod, type = "HC1"))
+```
+
+The `treat` coefficient should be near the true ATT of 2. The
+ebal-balanced control group is a much better counterfactual than the
+raw control group.
+
+## Adding regression adjustment (doubly-robust)
+
+Including covariates on the right-hand side gives a doubly-robust
+estimator: the ATT coefficient is consistent if *either* the weighting
+or the outcome model is correctly specified.
+
+```{r dr}
+mod_dr <- lm(y ~ treat + x1 + x2 + x3, data = df, weights = w)
+coef(mod_dr)["treat"]
+```
+
+For the simulated DGP both are correct, so this should match `mod`'s
+coefficient closely. In real data, regression adjustment is a useful
+hedge.
+
+## Survey-style inference
+
+If you're already in the `survey` package world, ebalance weights
+slot in as `weights = ` in `svydesign()`:
+
+```{r survey, eval = requireNamespace("survey", quietly = TRUE)}
+library(survey)
+des <- svydesign(ids = ~1, weights = ~w, data = df)
+svymod <- svyglm(y ~ treat, design = des)
+summary(svymod)$coefficients["treat", , drop = FALSE]
+```
+
+The survey-package SEs are also robust to the weighting; they
+typically agree with `sandwich::vcovHC(..., "HC1")` to a few percent
+on cross-sectional data.
+
+## Trimming if weights blow up
+
+Sometimes the entropy-balancing weights have a heavy right tail
+(`max(w) / mean(w)` in the dozens). Two options:
+
+```{r trim}
+glance.ebalance(fit)[, c("ess_control", "max_weight_ratio_control")]
+
+trimmed <- ebalance.trim(fit)        # automatic minimization
+glance.ebalance.trim(trimmed)[, c("ess_control", "max_weight_ratio_control")]
+```
+
+`ebalance.trim()` returns an object with the same shape, so
+`weights(trimmed)` and the downstream regression code are unchanged.
+The trimmed fit relaxes balance slightly to keep the max weight
+ratio low.
+
+## Choice of estimand for inference
+
+Everything above runs under the default `estimand = "ATT"`. For ATE
+or ATC, the only thing that changes is `weights(fit)` (it returns
+nontrivial weights for *both* groups under ATE). The `lm()` /
+`svyglm()` syntax is identical. See
+`vignette("estimands", package = "ebal")` for the comparison.

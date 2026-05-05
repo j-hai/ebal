@@ -28,32 +28,39 @@ tidy.ebalance.trim <- tidy.ebalance
 glance.ebalance <-
 function(x, ...)
   {
-    estimand   <- x$estimand %||% "ATT"
-    n_treated  <- if (!is.null(x$Treatment)) sum(x$Treatment == 1) else NA_integer_
-    n_control  <- if (!is.null(x$Treatment)) sum(x$Treatment == 0) else length(x$w)
-    nmom       <- length(x$target.margins) - 1L
-    # Pick the side(s) that were actually reweighted to compute the
-    # ESS / max-weight diagnostics.
-    if (estimand == "ATE") {
-      w_active <- c(x$control_solve$w, x$treated_solve$w)
-    } else {
-      # ATT or ATC: x$w is whichever side was reweighted.
-      w_active <- x$w
-    }
-    sum_w <- sum(w_active)
-    ess   <- if (sum_w > 0) sum_w^2 / sum(w_active^2) else NA_real_
+    ag <- .active_group(x)
+    nmom <- length(x$target.margins) - 1L
+    # Per-side ESS / max-weight diagnostics: each is computed against
+    # the relevant side's weight vector (treated for ATC, control for
+    # ATT; both for ATE). For sides that aren't reweighted the
+    # diagnostic falls back to the trivial values (ESS = n, max = 1,
+    # ratio = 1) so the column shape is uniform across estimands.
+    .ess <- function(w) if (sum(w) > 0) sum(w)^2 / sum(w^2) else NA_real_
+    .ratio <- function(w) if (length(w) > 0) max(w) / mean(w) else NA_real_
+
+    # Standardized-difference summaries via .balance_table()
+    bt <- .balance_table(x$Treatment, x$X, ag$w_full)
+    max_pre  <- max(abs(bt$std.diff.pre),  na.rm = TRUE)
+    max_post <- max(abs(bt$std.diff.post), na.rm = TRUE)
+
     data.frame(
-      estimand       = estimand,
-      n_treated      = n_treated,
-      n_control      = n_control,
-      n_moments      = nmom,
-      sum_weights    = sum_w,
-      ess_kish       = ess,
-      max_weight     = max(w_active),
-      max_weight_ratio = max(w_active) / mean(w_active),
-      maxdiff        = x$maxdiff,
-      converged      = x$converged,
-      stringsAsFactors = FALSE
+      estimand                  = ag$estimand,
+      n_treated                 = length(ag$it),
+      n_control                 = length(ag$ic),
+      n_moments                 = nmom,
+      sum_weights_control       = sum(ag$w_control),
+      sum_weights_treated       = sum(ag$w_treated),
+      ess_control               = .ess(ag$w_control),
+      ess_treated               = .ess(ag$w_treated),
+      max_weight_control        = max(ag$w_control),
+      max_weight_treated        = max(ag$w_treated),
+      max_weight_ratio_control  = .ratio(ag$w_control),
+      max_weight_ratio_treated  = .ratio(ag$w_treated),
+      max_abs_std_diff_pre      = max_pre,
+      max_abs_std_diff_post     = max_post,
+      maxdiff                   = x$maxdiff,
+      converged                 = x$converged,
+      stringsAsFactors          = FALSE
     )
   }
 

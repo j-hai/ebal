@@ -17,17 +17,30 @@ test_that("tidy.ebalance returns a per-covariate balance table", {
   expect_true(all(abs(out$std_diff_post) <= abs(out$std_diff_pre) + 1e-6))
 })
 
-test_that("glance.ebalance returns one row of summary stats", {
+test_that("glance.ebalance returns one row of summary stats with per-side diagnostics", {
   fit <- .fit_toy()
   out <- glance.ebalance(fit)
   expect_equal(nrow(out), 1L)
   expect_named(out, c("estimand", "n_treated", "n_control", "n_moments",
-                      "sum_weights", "ess_kish", "max_weight",
-                      "max_weight_ratio", "maxdiff", "converged"))
+                      "sum_weights_control", "sum_weights_treated",
+                      "ess_control", "ess_treated",
+                      "max_weight_control", "max_weight_treated",
+                      "max_weight_ratio_control", "max_weight_ratio_treated",
+                      "max_abs_std_diff_pre", "max_abs_std_diff_post",
+                      "maxdiff", "converged"))
   expect_equal(out$estimand, "ATT")
   expect_equal(out$n_treated, 30L)
   expect_equal(out$n_control, 50L)
   expect_true(out$converged)
+  # Trivial side (treated under ATT) has weight 1 throughout.
+  expect_equal(out$sum_weights_treated, 30)
+  expect_equal(out$max_weight_treated, 1)
+  expect_equal(out$max_weight_ratio_treated, 1)
+  # Reweighted side has nontrivial ESS / max-weight ratio.
+  expect_lt(out$ess_control, out$n_control)
+  expect_gt(out$max_weight_ratio_control, 1)
+  # Standardized differences shrink after weighting.
+  expect_lt(out$max_abs_std_diff_post, out$max_abs_std_diff_pre)
 })
 
 test_that("augment.ebalance joins .weight back to the data", {

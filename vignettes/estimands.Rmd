@@ -1,0 +1,154 @@
+---
+title: "Estimands: ATT, ATE, ATC"
+author: "Jens Hainmueller"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Estimands: ATT, ATE, ATC}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.5,
+  dpi = 96
+)
+set.seed(20260505)
+```
+
+`ebalance()` reweights one or both groups to match a target moment
+distribution. Which target you pick determines the **estimand** — the
+average treatment effect on a particular subpopulation. As of 0.3-0,
+`ebalance(..., estimand = "ATT" / "ATE" / "ATC")` selects:
+
+| `estimand` | reweighted | target moments | answers |
+|---|---|---|---|
+| `"ATT"` (default) | controls | treated group means | "what was the effect on those who actually got treatment?" |
+| `"ATC"` | treated   | control group means | "what would the effect have been on the control population if it had been treated?" |
+| `"ATE"` | both      | overall sample means | "what is the average effect across the whole population?" |
+
+This vignette builds the same toy panel and shows what changes across
+the three estimands.
+
+## A toy panel
+
+```{r setup}
+library(ebal)
+set.seed(20260505)
+n0 <- 200; n1 <- 100
+X <- rbind(
+  replicate(3, rnorm(n0, mean = 0)),       # controls
+  replicate(3, rnorm(n1, mean = 0.5))      # treated, shifted
+)
+colnames(X) <- c("x1", "x2", "x3")
+treatment <- c(rep(0, n0), rep(1, n1))
+
+c(treated_mean = colMeans(X[treatment == 1, ])[1],
+  control_mean = colMeans(X[treatment == 0, ])[1],
+  overall_mean = mean(X[, 1]))
+```
+
+The treated group means are above zero; the controls are at zero; the
+overall mean is somewhere between.
+
+## Three fits
+
+```{r fits}
+fit_att <- ebalance(Treatment = treatment, X = X, estimand = "ATT")
+fit_ate <- ebalance(Treatment = treatment, X = X, estimand = "ATE")
+fit_atc <- ebalance(Treatment = treatment, X = X, estimand = "ATC")
+```
+
+`weights(fit)` returns a length-`n` vector aligned to the original
+treatment indicator. The shape changes with the estimand:
+
+```{r weights-shape}
+table(treatment, sign(weights(fit_att)))   # ATT: treated = 1, controls reweighted
+table(treatment, sign(weights(fit_ate)))   # ATE: both reweighted
+table(treatment, sign(weights(fit_atc)))   # ATC: treated reweighted, controls = 1
+```
+
+## Where the weight goes
+
+For ATT, the controls are reweighted toward the treated mean (so their
+weighted mean equals the treated mean):
+
+```{r att-balance}
+weighted.mean(X[treatment == 0, 1], w = weights(fit_att)[treatment == 0])
+mean(X[treatment == 1, 1])
+```
+
+For ATE, **both groups** are reweighted toward the overall mean:
+
+```{r ate-balance}
+weighted.mean(X[treatment == 0, 1], w = weights(fit_ate)[treatment == 0])
+weighted.mean(X[treatment == 1, 1], w = weights(fit_ate)[treatment == 1])
+mean(X[, 1])
+```
+
+For ATC, the treated are reweighted toward the control mean:
+
+```{r atc-balance}
+weighted.mean(X[treatment == 1, 1], w = weights(fit_atc)[treatment == 1])
+mean(X[treatment == 0, 1])
+```
+
+## Diagnostics
+
+`glance()` returns a one-row "is this fit usable?" summary, with
+per-side ESS / max-weight ratios and the worst pre/post standardized
+difference:
+
+```{r glance, eval = requireNamespace("generics", quietly = TRUE)}
+library(generics)
+do.call(rbind, lapply(list(ATT = fit_att, ATE = fit_ate, ATC = fit_atc),
+                      glance))[, c("estimand", "ess_control", "ess_treated",
+                                   "max_weight_ratio_control",
+                                   "max_weight_ratio_treated",
+                                   "max_abs_std_diff_post")]
+```
+
+Read these top-down: ATT keeps the treated side trivial (ESS = 100,
+ratio = 1) and concentrates weight on a subset of controls. ATE
+reweights both sides, so both ESS values fall below their group sizes.
+ATC mirrors ATT with roles swapped.
+
+## Plots
+
+`autoplot(fit, type = "balance")` is the Love plot of standardized
+differences before vs. after weighting. `autoplot(fit, type = "weights")`
+is a histogram of the per-unit weights with the Kish ESS and
+max-weight ratio in the subtitle:
+
+```{r autoplot, eval = requireNamespace("ggplot2", quietly = TRUE)}
+library(ggplot2)
+autoplot(fit_ate, type = "weights")
+```
+
+Identical interfaces are available in base graphics via
+`plot(fit, type = ...)`.
+
+## Choosing an estimand
+
+A short rule of thumb:
+
+- **ATT** when the policy question is about people who actually got
+  treated (most program-evaluation work). Controls are a tool for
+  imputing the counterfactual; you don't need to extrapolate to them.
+- **ATE** when you want a population-level claim ("if everyone got
+  this treatment...") and you trust that the treatment effect is
+  similar across the covariate distribution.
+- **ATC** when the policy question is about the controls
+  ("would extending this program to non-recipients have helped?"); be
+  honest about the extrapolation involved.
+
+`ebalance()` doesn't make this choice for you — it just gives you the
+weights once you've made it. The associated standard error / inference
+question is independent (see `vignette("outcome-models", package = "ebal")`).

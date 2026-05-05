@@ -8,6 +8,7 @@ export(eb,
        ebalance,
        ebalance.trim,
        baltest.collect,
+       balance_table,
        getsquares,
        line.searcher,
        matrixmaker)
