@@ -305,6 +305,14 @@ plot.ebalance.trim <- function(x, ...) plot.ebalance(x, ...)
   }
   if (is.null(xlab)) xlab <- "Unit weight"
 
+  # If the user supplied breaks via ..., respect it; otherwise default
+  # to 30. Avoids "matched by multiple actual arguments" when a user
+  # passes plot(fit, type = "weights", breaks = 20).
+  dots <- list(...)
+  if (!"breaks" %in% names(dots)) dots$breaks <- 30
+  .hist <- function(w, ...) do.call(graphics::hist,
+                                    c(list(x = w), dots, list(...)))
+
   active <- switch(ag$reweighted,
                    controls = list(controls = ag$w_control),
                    treated  = list(treated = ag$w_treated),
@@ -323,19 +331,19 @@ plot.ebalance.trim <- function(x, ...) plot.ebalance(x, ...)
     op <- par(mar = c(5, 4, 4, 1))
     on.exit(par(op), add = TRUE)
     w <- active[[1]]
-    hist(w, breaks = 30, main = main, xlab = xlab,
-         ylab = "Number of units",
-         col = "grey80", border = "grey40", ...)
+    .hist(w, main = main, xlab = xlab,
+          ylab = "Number of units",
+          col = "grey80", border = "grey40")
     abline(v = 1, lty = 2, col = "grey40")
     mtext(sub_lines[1], side = 3, line = 0.2, cex = 0.85, col = "grey30")
   } else {
     op <- par(mfrow = c(1, 2), mar = c(5, 4, 4, 1), oma = c(0, 0, 3, 0))
     on.exit(par(op), add = TRUE)
     for (side in names(active)) {
-      hist(active[[side]], breaks = 30,
-           main = paste(side, "weights"), xlab = xlab,
-           ylab = "Number of units",
-           col = "grey80", border = "grey40", ...)
+      .hist(active[[side]],
+            main = paste(side, "weights"), xlab = xlab,
+            ylab = "Number of units",
+            col = "grey80", border = "grey40")
       abline(v = 1, lty = 2, col = "grey40")
     }
     mtext(main, side = 3, line = 1.2, outer = TRUE, cex = 1.1, font = 2)

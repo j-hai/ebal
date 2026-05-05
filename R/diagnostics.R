@@ -13,6 +13,14 @@ function(fit,
   {
     if (!inherits(fit, c("ebalance", "ebalance.trim")))
       stop("diagnostics() requires an ebalance or ebalance.trim object")
+    .check_threshold <- function(x, label, lo = 0, hi = Inf) {
+      if (length(x) != 1 || !is.numeric(x) || !is.finite(x) || x < lo || x > hi)
+        stop(sprintf("%s must be a finite scalar in [%g, %s]",
+                     label, lo, if (is.finite(hi)) format(hi) else "Inf"))
+    }
+    .check_threshold(ess_warn,      "ess_warn",      0, 1)
+    .check_threshold(ratio_warn,    "ratio_warn",    1, Inf)
+    .check_threshold(std_diff_warn, "std_diff_warn", 0, Inf)
 
     # Reuse glance.ebalance() for the bulk of the numbers.
     g <- glance.ebalance(fit)

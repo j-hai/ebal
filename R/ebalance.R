@@ -132,6 +132,15 @@ ebalance <- function(Treatment,
     # Allow a list(control=, treated=) for separate base weights, or a
     # single vector that's interpreted as the control side (treated
     # defaults to uniform).
+    .check_ate_list_names <- function(x, arg) {
+      if (!is.list(x)) return(invisible(NULL))
+      bad <- setdiff(names(x), c("control", "treated"))
+      if (length(bad) > 0)
+        stop(sprintf(
+          "%s for estimand = \"ATE\" must be a named list with elements \"control\" and/or \"treated\"; unknown names: %s",
+          arg, paste(sQuote(bad), collapse = ", ")))
+    }
+    .check_ate_list_names(base.weight, "base.weight")
     if (is.null(base.weight)) {
       bw_ctrl <- rep(1, ncontrols)
       bw_trt  <- rep(1, ntreated)
@@ -159,6 +168,7 @@ ebalance <- function(Treatment,
     # NULL gets a default seed inside .eb_solve_side(); a length-(k+1)
     # vector is interpreted as the control-side seed (treated defaults
     # to NULL); a list(control=, treated=) names them explicitly.
+    .check_ate_list_names(coefs, "coefs")
     if (is.null(coefs)) {
       coef_ctrl <- NULL
       coef_trt  <- NULL

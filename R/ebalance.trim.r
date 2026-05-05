@@ -22,12 +22,25 @@ ebalance.trim <-
      max.weight <- max(ebalanceobj$w/mean(ebalanceobj$w))
      minimization <- TRUE
     }
-    if(length(max.weight) != 1){
-      stop("length(max.weight) != 1")
+    if (length(max.weight) != 1 || !is.numeric(max.weight) ||
+        !is.finite(max.weight) || max.weight <= 0) {
+      stop("max.weight must be a finite positive scalar")
     }
-    if(length(min.weight) != 1){
-      stop("length(min.weight) != 1")
+    if (length(min.weight) != 1 || !is.numeric(min.weight) ||
+        !is.finite(min.weight) || min.weight < 0 || min.weight >= max.weight) {
+      stop("min.weight must be a finite scalar with 0 <= min.weight < max.weight")
     }
+    if (length(max.trim.iterations) != 1 || !is.numeric(max.trim.iterations) ||
+        !is.finite(max.trim.iterations) || max.trim.iterations < 1) {
+      stop("max.trim.iterations must be a finite positive scalar (>= 1)")
+    }
+    .check_increment <- function(x, label) {
+      if (length(x) != 1 || !is.numeric(x) || !is.finite(x) || x <= 0 || x >= 1) {
+        stop(sprintf("%s must be a finite scalar in (0, 1)", label))
+      }
+    }
+    .check_increment(max.weight.increment, "max.weight.increment")
+    .check_increment(min.weight.increment - 1, "min.weight.increment - 1")
 
   # starting setup for trimming
    w.trimming <- 1

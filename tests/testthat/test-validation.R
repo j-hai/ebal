@@ -42,6 +42,70 @@ test_that("formula NA in response is rejected with a clear message", {
                "Treatment contains missing data")
 })
 
+test_that("ebalance.trim() validates max.weight, min.weight, max.trim.iterations, increments", {
+  d <- .toy()
+  fit <- ebalance(Treatment = d$treatment, X = d$X, print.level = 0)
+
+  for (bad in list(NA_real_, Inf, -1, 0, c(2, 3))) {
+    expect_error(ebalance.trim(fit, max.weight = bad), "finite positive scalar")
+  }
+  expect_error(ebalance.trim(fit, max.weight = 5, min.weight = NA_real_),
+               "finite scalar")
+  expect_error(ebalance.trim(fit, max.weight = 5, min.weight = -1),
+               "0 <= min.weight")
+  expect_error(ebalance.trim(fit, max.weight = 5, min.weight = 5),
+               "min.weight < max.weight")
+  for (bad in list(NA_real_, 0, -1, c(10, 20))) {
+    expect_error(ebalance.trim(fit, max.weight = 5, max.trim.iterations = bad),
+                 "finite positive scalar")
+  }
+  expect_error(ebalance.trim(fit, max.weight = 5, max.weight.increment = 1.5),
+               "in \\(0, 1\\)")
+  expect_error(ebalance.trim(fit, max.weight = 5, max.weight.increment = 0),
+               "in \\(0, 1\\)")
+  expect_error(ebalance.trim(fit, max.weight = 5, min.weight.increment = 1),
+               "in \\(0, 1\\)")
+  expect_error(ebalance.trim(fit, max.weight = 5, min.weight.increment = NA_real_),
+               "in \\(0, 1\\)")
+})
+
+test_that("ATE base.weight and coefs reject misspelled list names", {
+  d <- .toy()
+  bw <- rep(1, 50)
+  expect_error(
+    ebalance(Treatment = d$treatment, X = d$X, estimand = "ATE",
+             base.weight = list(contrl = bw)),
+    "unknown names"
+  )
+  expect_error(
+    ebalance(Treatment = d$treatment, X = d$X, estimand = "ATE",
+             coefs = list(treated = rep(0, 4), bogus = 1)),
+    "unknown names"
+  )
+})
+
+test_that("diagnostics() validates threshold arguments", {
+  d <- .toy()
+  fit <- ebalance(Treatment = d$treatment, X = d$X, print.level = 0)
+  for (bad in list(NA_real_, -0.1, 1.5)) {
+    expect_error(diagnostics(fit, ess_warn = bad),    "finite scalar")
+  }
+  for (bad in list(NA_real_, 0, 0.5)) {
+    expect_error(diagnostics(fit, ratio_warn = bad), "finite scalar")
+  }
+  for (bad in list(NA_real_, -0.1)) {
+    expect_error(diagnostics(fit, std_diff_warn = bad), "finite scalar")
+  }
+})
+
+test_that("plot(fit, type='weights', breaks=K) respects user-supplied breaks", {
+  d <- .toy()
+  fit <- ebalance(Treatment = d$treatment, X = d$X, print.level = 0)
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_silent(plot(fit, type = "weights", breaks = 10))
+  expect_silent(plot(fit, type = "weights", breaks = seq(0, 10, by = 0.5)))
+})
+
 test_that("weak-fit warning fires (and is suppressible) on a low-ESS fit", {
   set.seed(20260505L)
   treatment <- c(rep(0, 50), rep(1, 30))
