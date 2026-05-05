@@ -84,6 +84,26 @@ test_that("ATE base.weight and coefs reject misspelled list names", {
   )
 })
 
+test_that("ATE base.weight and coefs reject unnamed (or partially named) lists", {
+  d <- .toy()
+  bw <- rep(1, 50)
+  expect_error(
+    ebalance(Treatment = d$treatment, X = d$X, estimand = "ATE",
+             base.weight = list(bw)),                            # no names
+    "unnamed"
+  )
+  expect_error(
+    ebalance(Treatment = d$treatment, X = d$X, estimand = "ATE",
+             base.weight = list(control = bw, rep(1, 30))),      # one missing
+    "unnamed"
+  )
+  expect_error(
+    ebalance(Treatment = d$treatment, X = d$X, estimand = "ATE",
+             coefs = list(rep(0, 4))),
+    "unnamed"
+  )
+})
+
 test_that("diagnostics() validates threshold arguments", {
   d <- .toy()
   fit <- ebalance(Treatment = d$treatment, X = d$X, print.level = 0)
@@ -98,12 +118,17 @@ test_that("diagnostics() validates threshold arguments", {
   }
 })
 
-test_that("plot(fit, type='weights', breaks=K) respects user-supplied breaks", {
+test_that("plot(fit, type='weights', ...) respects user-supplied hist() args", {
   d <- .toy()
   fit <- ebalance(Treatment = d$treatment, X = d$X, print.level = 0)
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_silent(plot(fit, type = "weights", breaks = 10))
   expect_silent(plot(fit, type = "weights", breaks = seq(0, 10, by = 0.5)))
+  expect_silent(plot(fit, type = "weights", col = "red"))
+  expect_silent(plot(fit, type = "weights", border = "blue"))
+  expect_silent(plot(fit, type = "weights", ylab = "frequency"))
+  expect_silent(plot(fit, type = "weights", col = "red", border = "blue",
+                     breaks = 15, ylab = "frequency"))
 })
 
 test_that("weak-fit warning fires (and is suppressible) on a low-ESS fit", {

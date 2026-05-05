@@ -305,11 +305,16 @@ plot.ebalance.trim <- function(x, ...) plot.ebalance(x, ...)
   }
   if (is.null(xlab)) xlab <- "Unit weight"
 
-  # If the user supplied breaks via ..., respect it; otherwise default
-  # to 30. Avoids "matched by multiple actual arguments" when a user
-  # passes plot(fit, type = "weights", breaks = 20).
+  # If the user supplied any of these via ..., respect them; otherwise
+  # apply the package defaults. Avoids "matched by multiple actual
+  # arguments" when a user passes plot(fit, type = "weights",
+  # col = "red") (or breaks, border, ylab, etc.).
   dots <- list(...)
-  if (!"breaks" %in% names(dots)) dots$breaks <- 30
+  defaults <- list(breaks = 30, col = "grey80", border = "grey40",
+                   ylab = "Number of units")
+  for (nm in names(defaults)) {
+    if (!nm %in% names(dots)) dots[[nm]] <- defaults[[nm]]
+  }
   .hist <- function(w, ...) do.call(graphics::hist,
                                     c(list(x = w), dots, list(...)))
 
@@ -331,9 +336,7 @@ plot.ebalance.trim <- function(x, ...) plot.ebalance(x, ...)
     op <- par(mar = c(5, 4, 4, 1))
     on.exit(par(op), add = TRUE)
     w <- active[[1]]
-    .hist(w, main = main, xlab = xlab,
-          ylab = "Number of units",
-          col = "grey80", border = "grey40")
+    .hist(w, main = main, xlab = xlab)
     abline(v = 1, lty = 2, col = "grey40")
     mtext(sub_lines[1], side = 3, line = 0.2, cex = 0.85, col = "grey30")
   } else {
@@ -341,9 +344,7 @@ plot.ebalance.trim <- function(x, ...) plot.ebalance(x, ...)
     on.exit(par(op), add = TRUE)
     for (side in names(active)) {
       .hist(active[[side]],
-            main = paste(side, "weights"), xlab = xlab,
-            ylab = "Number of units",
-            col = "grey80", border = "grey40")
+            main = paste(side, "weights"), xlab = xlab)
       abline(v = 1, lty = 2, col = "grey40")
     }
     mtext(main, side = 3, line = 1.2, outer = TRUE, cex = 1.1, font = 2)

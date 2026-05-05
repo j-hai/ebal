@@ -134,7 +134,12 @@ ebalance <- function(Treatment,
     # defaults to uniform).
     .check_ate_list_names <- function(x, arg) {
       if (!is.list(x)) return(invisible(NULL))
-      bad <- setdiff(names(x), c("control", "treated"))
+      nm <- names(x)
+      if (is.null(nm) || any(nm == "" | is.na(nm)))
+        stop(sprintf(
+          "%s for estimand = \"ATE\" must be a named list with elements \"control\" and/or \"treated\"; got an unnamed (or partially named) list",
+          arg))
+      bad <- setdiff(nm, c("control", "treated"))
       if (length(bad) > 0)
         stop(sprintf(
           "%s for estimand = \"ATE\" must be a named list with elements \"control\" and/or \"treated\"; unknown names: %s",
