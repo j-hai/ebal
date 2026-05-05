@@ -265,22 +265,22 @@ plot.ebalance <- function(x,
   if (is.null(main)) {
     main <- "Covariate balance (before vs. after entropy balancing)"
   }
-  bal <- .balance_table(x$Treatment, x$X, weights(x))
-  pre  <- bal$std.diff.pre
-  post <- bal$std.diff.post
+  bal <- balance_table(x)
+  pre  <- bal$std_diff_pre
+  post <- bal$std_diff_post
   if (abs.values) { pre <- abs(pre); post <- abs(post) }
   k <- nrow(bal)
-  ord <- order(abs(bal$std.diff.pre), decreasing = FALSE)
+  ord <- order(abs(bal$std_diff_pre), decreasing = FALSE)
   ylim <- c(1, k)
   xlim <- range(c(0, pre, post), na.rm = TRUE)
   if (abs.values) xlim[1] <- 0
 
-  op <- par(mar = c(4, max(8, max(nchar(rownames(bal))) * 0.6), 3, 1))
+  op <- par(mar = c(4, max(8, max(nchar(bal$variable)) * 0.6), 3, 1))
   on.exit(par(op), add = TRUE)
   plot(pre[ord], seq_len(k), type = "n",
        xlim = xlim, ylim = ylim,
        xlab = xlab, ylab = "", yaxt = "n", main = main, ...)
-  axis(2, at = seq_len(k), labels = rownames(bal)[ord], las = 1)
+  axis(2, at = seq_len(k), labels = bal$variable[ord], las = 1)
   abline(v = 0, col = "grey80")
   points(pre[ord],  seq_len(k), pch = 1, col = "black")
   points(post[ord], seq_len(k), pch = 19, col = "darkblue")

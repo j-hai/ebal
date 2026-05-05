@@ -1,5 +1,34 @@
 # ebal 0.3-0
 
+## New: `diagnostics()`
+
+* `diagnostics(fit)` is the friendlier "is my fit okay?" companion to
+  `glance()`. It returns a structured object with `PASS` / `WARN` /
+  `FAIL` flags for the control/treated ESS, the worst post-weighting
+  standardized difference, convergence, and (for trimmed objects)
+  trim feasibility. Print method renders each check on its own line.
+  Thresholds (`ess_warn`, `ratio_warn`, `std_diff_warn`) are
+  user-configurable per call.
+
+## New: weak-fit warnings at fit time
+
+* `ebalance()` now emits a `warning()` when the resulting fit is
+  unhealthy: `converged = FALSE`, ESS below 30% of the relevant
+  side's `n`, or max/mean weight ratio above 10. Suppressible via
+  `options(ebal.warn_weak_fit = FALSE)`. The warning explains which
+  diagnostic tripped and points at `?diagnostics` /
+  `ebalance.trim()`.
+
+## Internal consolidation
+
+* All internal consumers (`autoplot()`, `plot()`, `glance()`,
+  `summary()`, `tidy()`, `as.data.frame()`) now route through the
+  exported `balance_table()` instead of the older internal
+  `.balance_table()`. The canonical column names
+  (`mean_treated_pre`, `mean_treated_post`, `mean_control_pre`,
+  `mean_control_post`, `diff_pre`, `diff_post`, `std_diff_pre`,
+  `std_diff_post`, `pct_reduction`) propagate everywhere.
+
 ## New: `balance_table()` exported
 
 * `balance_table(fit)` returns a tidy per-covariate balance table with

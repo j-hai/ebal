@@ -32,10 +32,10 @@ function(x, ...)
     .ess <- function(w) if (sum(w) > 0) sum(w)^2 / sum(w^2) else NA_real_
     .ratio <- function(w) if (length(w) > 0) max(w) / mean(w) else NA_real_
 
-    # Standardized-difference summaries via .balance_table()
-    bt <- .balance_table(x$Treatment, x$X, ag$w_full)
-    max_pre  <- max(abs(bt$std.diff.pre),  na.rm = TRUE)
-    max_post <- max(abs(bt$std.diff.post), na.rm = TRUE)
+    # Standardized-difference summaries via balance_table().
+    bt <- balance_table(x)
+    max_pre  <- max(abs(bt$std_diff_pre),  na.rm = TRUE)
+    max_post <- max(abs(bt$std_diff_post), na.rm = TRUE)
 
     data.frame(
       estimand                  = ag$estimand,

@@ -10,6 +10,23 @@ test_that("autoplot.ebalance returns a ggplot when ggplot2 is available", {
   expect_s3_class(p, "ggplot")
 })
 
+test_that("autoplot(trimmed, type = 'weights') and plot(trimmed, type = 'weights') work", {
+  skip_if_not_installed("ggplot2")
+  set.seed(20260505L)
+  treatment <- c(rep(0, 50), rep(1, 30))
+  X <- rbind(replicate(3, rnorm(50, 0)),
+             replicate(3, rnorm(30, 0.5)))
+  fit <- ebalance(Treatment = treatment, X = X, print.level = 0)
+  trimmed <- ebalance.trim(fit, max.weight = 5, print.level = 0)
+
+  expect_s3_class(ggplot2::autoplot(trimmed, type = "weights"), "ggplot")
+  expect_s3_class(ggplot2::autoplot(trimmed, type = "balance"), "ggplot")
+
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_silent(plot(trimmed, type = "weights"))
+  expect_silent(plot(trimmed, type = "balance"))
+})
+
 test_that("autoplot(fit, type = 'weights') returns a ggplot for each estimand", {
   skip_if_not_installed("ggplot2")
   set.seed(20260504L)

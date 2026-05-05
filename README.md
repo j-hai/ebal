@@ -27,6 +27,18 @@ install.packages("ebal")
 remotes::install_github("j-hai/ebal")
 ```
 
+## Estimands at a glance
+
+`ebalance(..., estimand = ...)` chooses what gets reweighted:
+
+| `estimand` | who gets reweighted | targets | answers |
+|---|---|---|---|
+| `"ATT"` (default) | controls | treated-group means | "what was the effect on those who actually got treatment?" |
+| `"ATC"` | treated   | control-group means | "what would the effect have been on the control population if it had been treated?" |
+| `"ATE"` | both      | overall sample means | "what is the average effect across the whole population?" |
+
+**Reading weights:** always use `weights(fit)`, which returns a length-`n` vector aligned to your original `Treatment`/`X` and routes the per-side semantics correctly. `fit$w` is side-specific (controls under ATT; treated under ATC; control side only under ATE) and is kept for backward compatibility — prefer `weights(fit)` in new code. See `?ebalance` for the full per-estimand slot table.
+
 ## Quick start
 
 ```r
@@ -48,9 +60,12 @@ fit <- ebalance(Treatment = treatment, X = X)
 print(fit)
 summary(fit)        # balance table, before vs. after weighting
 plot(fit)           # Love plot of standardized differences
+plot(fit, type = "weights")  # weight histogram with ESS / max-weight ratio
+
+diagnostics(fit)    # PASS / WARN / FAIL on ESS, balance, convergence, trimming
 
 # Use weights in a downstream regression
-df$w <- weights(fit)        # length nrow(df), 1 for treated, eb-weight for controls
+df$w <- weights(fit)        # length nrow(df), correct shape per estimand
 df$y <- treatment + rnorm(nrow(df))            # toy outcome for the example
 mod  <- lm(y ~ treat, data = df, weights = w)
 ```

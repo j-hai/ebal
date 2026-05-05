@@ -212,8 +212,53 @@ ebalance <- function(Treatment,
   z$X         <- X
   z$estimand  <- estimand
   class(z)    <- "ebalance"
+  .warn_weak_fit(z)
   z
 }
+
+# Internal: soft warnings for fits that converged but look unhealthy.
+# Hard failures (converged = FALSE) get a top-line message; ESS / weight
+# ratio extremes get a softer note. Suppressible via
+# options(ebal.warn_weak_fit = FALSE).
+.warn_weak_fit <-
+function(fit,
+         ess_warn   = 0.30,
+         ratio_warn = 10)
+  {
+    if (isFALSE(getOption("ebal.warn_weak_fit", TRUE))) return(invisible(NULL))
+    if (!isTRUE(fit$converged)) {
+      warning(sprintf(
+        "ebalance() did not converge for estimand = \"%s\" (max moment deviation = %.3g). The returned object holds the most recent iterate.",
+        fit$estimand %||% "ATT", fit$maxdiff %||% NA_real_),
+        call. = FALSE)
+      return(invisible(NULL))
+    }
+    g <- tryCatch(glance.ebalance(fit), error = function(e) NULL)
+    if (is.null(g)) return(invisible(NULL))
+    msgs <- character(0)
+    if (g$n_control > 0 && g$ess_control / g$n_control < ess_warn)
+      msgs <- c(msgs, sprintf(
+        "control side has ESS = %.0f / %d (%.0f%%); below %.0f%%",
+        g$ess_control, g$n_control,
+        100 * g$ess_control / g$n_control, 100 * ess_warn))
+    if (g$n_treated > 0 && g$ess_treated / g$n_treated < ess_warn)
+      msgs <- c(msgs, sprintf(
+        "treated side has ESS = %.0f / %d (%.0f%%); below %.0f%%",
+        g$ess_treated, g$n_treated,
+        100 * g$ess_treated / g$n_treated, 100 * ess_warn))
+    if (g$max_weight_ratio_control > ratio_warn)
+      msgs <- c(msgs, sprintf("control max/mean weight ratio = %.1f > %.0f",
+                              g$max_weight_ratio_control, ratio_warn))
+    if (g$max_weight_ratio_treated > ratio_warn)
+      msgs <- c(msgs, sprintf("treated max/mean weight ratio = %.1f > %.0f",
+                              g$max_weight_ratio_treated, ratio_warn))
+    if (length(msgs) > 0)
+      warning(paste(c("ebalance() fit converged but is concentrated on a small number of units:",
+                      paste0("  - ", msgs),
+                      "Consider ebalance.trim(), tighter constraint.tolerance, or fewer moment constraints. See ?diagnostics. Suppress with options(ebal.warn_weak_fit = FALSE)."),
+                    collapse = "\n"), call. = FALSE)
+    invisible(NULL)
+  }
 
 # Internal: handle the single-solve case (ATT or ATC). Wraps the
 # solver call and validation that's shared between the two role-symmetric

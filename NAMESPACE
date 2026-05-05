@@ -10,9 +10,12 @@ export(eb,
        ebalance.trim,
        baltest.collect,
        balance_table,
+       diagnostics,
        getsquares,
        line.searcher,
        matrixmaker)
+
+S3method(print, ebalance.diagnostics)
 
 # S3 method registrations for the print/summary/plot/weights methods on
 # ebalance and ebalance.trim objects. We intentionally do NOT make

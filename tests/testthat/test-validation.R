@@ -42,6 +42,57 @@ test_that("formula NA in response is rejected with a clear message", {
                "Treatment contains missing data")
 })
 
+test_that("weak-fit warning fires (and is suppressible) on a low-ESS fit", {
+  set.seed(20260505L)
+  treatment <- c(rep(0, 50), rep(1, 30))
+  X <- rbind(replicate(3, rnorm(50, 0)),
+             replicate(3, rnorm(30, 0.5)))
+
+  # Test the warning path indirectly by calling .warn_weak_fit() with
+  # a high ess_warn that forces the threshold to fire on this fixture.
+  fit <- ebalance(Treatment = treatment, X = X, print.level = 0)
+  withr::with_options(list(ebal.warn_weak_fit = TRUE), {
+    expect_warning(
+      ebal:::.warn_weak_fit(fit, ess_warn = 0.99),
+      "concentrated on a small number"
+    )
+  })
+  # And opting out suppresses it.
+  withr::with_options(list(ebal.warn_weak_fit = FALSE), {
+    expect_no_warning(ebal:::.warn_weak_fit(fit, ess_warn = 0.99))
+  })
+})
+
+test_that("weak-fit warning fires loudly when convergence fails", {
+  # Force non-convergence by capping iterations very low. The fit still
+  # returns; the .warn_weak_fit() helper should flag it.
+  set.seed(20260505L)
+  treatment <- c(rep(0, 50), rep(1, 30))
+  X <- rbind(replicate(3, rnorm(50, 0)),
+             replicate(3, rnorm(30, 1.0)))
+  withr::with_options(list(ebal.warn_weak_fit = TRUE), {
+    expect_warning(
+      ebalance(Treatment = treatment, X = X,
+               max.iterations = 1, print.level = 0),
+      "did not converge"
+    )
+  })
+})
+
+test_that("diagnostics() returns a structured object and prints PASS/WARN/FAIL", {
+  set.seed(20260505L)
+  treatment <- c(rep(0, 50), rep(1, 30))
+  X <- rbind(replicate(3, rnorm(50, 0)),
+             replicate(3, rnorm(30, 0.5)))
+  fit <- ebalance(Treatment = treatment, X = X, print.level = 0)
+  d <- diagnostics(fit)
+  expect_s3_class(d, "ebalance.diagnostics")
+  expect_equal(d$estimand, "ATT")
+  expect_true(d$check_balance$status %in% c("PASS", "WARN", "FAIL"))
+  out <- capture.output(print(d))
+  expect_true(any(grepl("PASS|WARN|FAIL", out)))
+})
+
 test_that("norm.constant rejects 0, NA, Inf, negative for ATT/ATC", {
   d <- .toy()
   for (bad in list(0, NA_real_, Inf, -1)) {

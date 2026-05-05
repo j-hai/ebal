@@ -22,11 +22,11 @@ autoplot.ebalance.trim <- autoplot.ebalance
 .autoplot_ebalance_balance <-
 function(object)
   {
-    bt <- .balance_table(object$Treatment, object$X, weights(object))
+    bt <- balance_table(object)
     df <- data.frame(
-      term  = factor(rownames(bt), levels = rev(rownames(bt))),
-      pre   = bt$std.diff.pre,
-      post  = bt$std.diff.post,
+      term  = factor(bt$variable, levels = rev(bt$variable)),
+      pre   = bt$std_diff_pre,
+      post  = bt$std_diff_post,
       stringsAsFactors = FALSE
     )
     long <- rbind(
