@@ -8,58 +8,77 @@
 
 # ---- internal helpers -------------------------------------------------------
 
-# Build a balance table comparing pre-weighting and post-weighting moments
-# for the columns of X under a binary Treatment vector and a vector of
-# control weights w.controls (length = number of controls).
-.balance_table <- function(Treatment, X, w.controls) {
+# Build a balance table comparing pre- and post-weighting moments
+# under a binary Treatment vector and a length-n weights_full vector.
+# Treatment-side and control-side post-weighting means are computed
+# from whichever side carries non-trivial weights — for ATT only the
+# control side moves; for ATC only the treated side moves; for ATE
+# both move and the post-weighting columns are the weighted means of
+# each group separately.
+.balance_table <- function(Treatment, X, weights_full) {
   is.t <- Treatment == 1
   is.c <- Treatment == 0
-  Xt   <- X[is.t, , drop = FALSE]
-  Xc   <- X[is.c, , drop = FALSE]
+  Xt <- X[is.t, , drop = FALSE]
+  Xc <- X[is.c, , drop = FALSE]
+  wt <- weights_full[is.t]
+  wc <- weights_full[is.c]
 
-  mean.t       <- colMeans(Xt)
-  mean.c.pre   <- colMeans(Xc)
-  mean.c.post  <- apply(Xc, 2, weighted.mean, w = w.controls)
+  mean.t.pre  <- colMeans(Xt)
+  mean.c.pre  <- colMeans(Xc)
+  mean.t.post <- if (sum(wt) > 0) apply(Xt, 2, weighted.mean, w = wt) else mean.t.pre
+  mean.c.post <- if (sum(wc) > 0) apply(Xc, 2, weighted.mean, w = wc) else mean.c.pre
 
-  # Pooled SD across treatment and control (pre), used as the
-  # denominator for both pre- and post-weighting standardized
-  # differences so they are directly comparable.
   var.t  <- apply(Xt, 2, var)
   var.c  <- apply(Xc, 2, var)
   sd.pool <- sqrt((var.t + var.c) / 2)
   sd.pool[sd.pool == 0] <- NA_real_
 
-  out <- data.frame(
-    mean.Tr        = mean.t,
+  data.frame(
+    mean.Tr        = mean.t.post,
     mean.Co.pre    = mean.c.pre,
     mean.Co.post   = mean.c.post,
-    diff.pre       = mean.t - mean.c.pre,
-    diff.post      = mean.t - mean.c.post,
-    std.diff.pre   = (mean.t - mean.c.pre)  / sd.pool,
-    std.diff.post  = (mean.t - mean.c.post) / sd.pool,
+    diff.pre       = mean.t.pre  - mean.c.pre,
+    diff.post      = mean.t.post - mean.c.post,
+    std.diff.pre   = (mean.t.pre  - mean.c.pre)  / sd.pool,
+    std.diff.post  = (mean.t.post - mean.c.post) / sd.pool,
     row.names = colnames(X),
     stringsAsFactors = FALSE
   )
-  out
 }
 
 # ---- print methods ----------------------------------------------------------
 
 print.ebalance <- function(x, ...) {
-  cat("Entropy balancing\n")
-  cat("-----------------\n")
+  estimand <- x$estimand %||% "ATT"
+  cat("Entropy balancing  (estimand: ", estimand, ")\n", sep = "")
+  cat("---------------------------------\n")
   ntreated  <- if (!is.null(x$Treatment)) sum(x$Treatment == 1) else NA
-  ncontrols <- length(x$w)
-  cat(sprintf("Treated:    %d\n", ntreated))
-  cat(sprintf("Controls:   %d (sum of weights = %.3f)\n",
-              ncontrols, sum(x$w)))
+  ncontrols <- if (!is.null(x$Treatment)) sum(x$Treatment == 0) else NA
+  if (estimand == "ATT") {
+    cat(sprintf("Treated:    %d\n", ntreated))
+    cat(sprintf("Controls:   %d (reweighted; sum of weights = %.3f)\n",
+                ncontrols, sum(x$w)))
+  } else if (estimand == "ATC") {
+    cat(sprintf("Treated:    %d (reweighted; sum of weights = %.3f)\n",
+                ntreated, sum(x$w)))
+    cat(sprintf("Controls:   %d\n", ncontrols))
+  } else {
+    cat(sprintf("Treated:    %d (reweighted; sum of weights = %.3f)\n",
+                ntreated, sum(x$treated_solve$w)))
+    cat(sprintf("Controls:   %d (reweighted; sum of weights = %.3f)\n",
+                ncontrols, sum(x$control_solve$w)))
+  }
   nmom <- length(x$target.margins) - 1L  # subtract the norm.constant entry
   cat(sprintf("Moments:    %d covariate moment(s) balanced\n", nmom))
-  cat(sprintf("Converged:  %s   (max moment deviation = %.3g)\n",
-              x$converged, x$maxdiff))
+  if (estimand == "ATE") {
+    cat(sprintf("Converged:  control = %s, treated = %s   (max deviation = %.3g)\n",
+                x$control_solve$converged, x$treated_solve$converged, x$maxdiff))
+  } else {
+    cat(sprintf("Converged:  %s   (max moment deviation = %.3g)\n",
+                x$converged, x$maxdiff))
+  }
   cat("\nUse summary() for a balance table, weights() for the per-unit\n")
-  cat("weight vector (treated units get weight 1), and plot() for a\n")
-  cat("Love plot of standardized differences.\n")
+  cat("weight vector, and plot() for a Love plot of standardized differences.\n")
   invisible(x)
 }
 
@@ -92,7 +111,7 @@ summary.ebalance <- function(object, ...) {
          "in the result; refit with the current package version to use ",
          "summary().")
   }
-  bal <- .balance_table(object$Treatment, object$X, object$w)
+  bal <- .balance_table(object$Treatment, object$X, weights(object))
   out <- list(
     call.info = list(n.treated  = sum(object$Treatment == 1),
                      n.controls = sum(object$Treatment == 0),
@@ -110,7 +129,7 @@ summary.ebalance.trim <- function(object, ...) {
          "in the result; refit with the current package version to use ",
          "summary().")
   }
-  bal <- .balance_table(object$Treatment, object$X, object$w)
+  bal <- .balance_table(object$Treatment, object$X, weights(object))
   out <- list(
     call.info = list(n.treated      = sum(object$Treatment == 1),
                      n.controls     = sum(object$Treatment == 0),
@@ -159,9 +178,21 @@ weights.ebalance <- function(object, ...) {
          "current package version to use weights() at full length, or ",
          "read object$w for the controls-only vector.")
   }
+  estimand <- object$estimand %||% "ATT"
   out <- numeric(length(object$Treatment))
-  out[object$Treatment == 1] <- 1
-  out[object$Treatment == 0] <- object$w
+  if (estimand == "ATT") {
+    # Controls reweighted; treated units carry weight 1.
+    out[object$Treatment == 1] <- 1
+    out[object$Treatment == 0] <- object$w
+  } else if (estimand == "ATC") {
+    # Treated reweighted; control units carry weight 1.
+    out[object$Treatment == 1] <- object$w
+    out[object$Treatment == 0] <- 1
+  } else {
+    # ATE: both groups carry estimated weights from their respective solves.
+    out[object$Treatment == 0] <- object$control_solve$w
+    out[object$Treatment == 1] <- object$treated_solve$w
+  }
   out
 }
 
@@ -198,7 +229,7 @@ plot.ebalance <- function(x,
     stop("plot() requires the Treatment and X fields, which are stored ",
          "by the current package version. Refit to use plot().")
   }
-  bal <- .balance_table(x$Treatment, x$X, x$w)
+  bal <- .balance_table(x$Treatment, x$X, weights(x))
   pre  <- bal$std.diff.pre
   post <- bal$std.diff.post
   if (abs.values) { pre <- abs(pre); post <- abs(post) }

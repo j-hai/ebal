@@ -8,9 +8,11 @@ ebalance <- function(Treatment,
                      print.level = 0,
                      data = NULL,
                      method = c("newton", "autodiff"),
+                     estimand = c("ATT", "ATE", "ATC"),
                      ...) {
 
-  method <- match.arg(method)
+  method   <- match.arg(method)
+  estimand <- match.arg(estimand)
 
   # ---- formula interface ---------------------------------------------------
   # If the user passed a two-sided formula as the first argument, build
@@ -34,13 +36,6 @@ ebalance <- function(Treatment,
     if (is.null(treat)) {
       stop("formula has no response (left-hand side); expected treat ~ x1 + x2 + ...")
     }
-    # Reject NAs explicitly, here, to match the matrix-interface
-    # contract. Without this, model.matrix() below silently drops the
-    # NA rows from X (default na.action) while model.response() above
-    # kept them via na.pass — the result was a length-mismatch error
-    # ("length(Treatment) != nrow(X)") instead of a clear "missing data"
-    # message. Build the matrix from the same model frame to lock the
-    # row alignment in either direction.
     if (any(is.na(treat)))
       stop("Treatment contains missing data")
     if (any(is.na(mf)))
@@ -59,9 +54,6 @@ ebalance <- function(Treatment,
   if (is.null(X)) {
     stop("'X' is required when 'Treatment' is not a formula")
   }
-  # NA checks first: any non-finite Treatment value would otherwise
-  # poison the binary check below (NA != 1 returns NA, which then
-  # triggers "missing value where TRUE/FALSE needed" in the if()).
   if (sum(is.na(Treatment)) > 0) {
     stop("Treatment contains missing data")
   }
@@ -92,12 +84,122 @@ ebalance <- function(Treatment,
   # ---- setup ---------------------------------------------------------------
   ntreated  <- sum(Treatment == 1)
   ncontrols <- sum(Treatment == 0)
+  ntotal    <- ntreated + ncontrols
 
-  if (is.null(base.weight)) {
-    base.weight <- rep(1, ncontrols)
+  # ---- estimand dispatch ---------------------------------------------------
+  # ATT: reweight controls to match treated moments. (Default; existing
+  #      behavior unchanged.)
+  # ATC: reweight treated to match control moments. Roles swapped from ATT.
+  # ATE: reweight both groups to match overall sample moments. Two solves,
+  #      one per group; output carries weights for both.
+  if (estimand == "ATT") {
+    z <- .eb_dispatch_one_side(
+      donor_X         = X[Treatment == 0, , drop = FALSE],
+      target_means    = colMeans(X[Treatment == 1, , drop = FALSE]),
+      norm.constant   = norm.constant %||% ntreated,
+      base.weight     = base.weight   %||% rep(1, ncontrols),
+      n_donor_label   = "controls",
+      n_donor         = ncontrols,
+      coefs           = coefs,
+      method          = method, max.iterations = max.iterations,
+      constraint.tolerance = constraint.tolerance, print.level = print.level
+    )
+  } else if (estimand == "ATC") {
+    z <- .eb_dispatch_one_side(
+      donor_X         = X[Treatment == 1, , drop = FALSE],
+      target_means    = colMeans(X[Treatment == 0, , drop = FALSE]),
+      norm.constant   = norm.constant %||% ncontrols,
+      base.weight     = base.weight   %||% rep(1, ntreated),
+      n_donor_label   = "treated",
+      n_donor         = ntreated,
+      coefs           = coefs,
+      method          = method, max.iterations = max.iterations,
+      constraint.tolerance = constraint.tolerance, print.level = print.level
+    )
+  } else {
+    # ATE: two solves, both targeting overall sample moments.
+    overall_means <- colMeans(X)
+    # Allow a list(control=, treated=) for separate base weights, or a
+    # single vector that's interpreted as the control side (treated
+    # defaults to uniform).
+    if (is.null(base.weight)) {
+      bw_ctrl <- rep(1, ncontrols)
+      bw_trt  <- rep(1, ntreated)
+    } else if (is.list(base.weight)) {
+      bw_ctrl <- base.weight$control %||% rep(1, ncontrols)
+      bw_trt  <- base.weight$treated %||% rep(1, ntreated)
+    } else {
+      bw_ctrl <- base.weight
+      bw_trt  <- rep(1, ntreated)
+    }
+    .check_bw <- function(bw, n, label) {
+      if (length(bw) != n)
+        stop(sprintf("length of base.weight for %s must equal %d", label, n))
+      if (any(is.na(bw)) || any(!is.finite(bw)))
+        stop(sprintf("base.weight for %s must be finite", label))
+      if (any(bw < 0))
+        stop(sprintf("base.weight for %s must be non-negative", label))
+      if (sum(bw) <= 0)
+        stop(sprintf("base.weight for %s must have positive sum", label))
+    }
+    .check_bw(bw_ctrl, ncontrols, "controls")
+    .check_bw(bw_trt,  ntreated,  "treated")
+
+    control_side <- .eb_solve_side(
+      donor_X = X[Treatment == 0, , drop = FALSE],
+      target_means = overall_means, norm_constant = ncontrols,
+      base.weight = bw_ctrl, coefs = NULL,
+      method = method, max.iterations = max.iterations,
+      constraint.tolerance = constraint.tolerance, print.level = print.level
+    )
+    treated_side <- .eb_solve_side(
+      donor_X = X[Treatment == 1, , drop = FALSE],
+      target_means = overall_means, norm_constant = ntreated,
+      base.weight = bw_trt, coefs = NULL,
+      method = method, max.iterations = max.iterations,
+      constraint.tolerance = constraint.tolerance, print.level = print.level
+    )
+    z <- list(
+      estimand              = "ATE",
+      Treatment             = Treatment.in,
+      X                     = X,
+      base.weight           = list(control = bw_ctrl, treated = bw_trt),
+      norm.constant         = list(control = ncontrols, treated = ntreated),
+      constraint.tolerance  = constraint.tolerance,
+      max.iterations        = max.iterations,
+      print.level           = print.level,
+      control_solve         = control_side,
+      treated_solve         = treated_side,
+      # Backward-compat top-level fields point at the control side so
+      # callers reading fit$w / fit$coefs / fit$target.margins still see
+      # consistent shape; the treated-side fields are accessible via
+      # fit$treated_solve$*.
+      target.margins        = control_side$target.margins,
+      co.xdata              = control_side$co.xdata,
+      w                     = control_side$w,
+      coefs                 = control_side$coefs,
+      maxdiff               = max(control_side$maxdiff, treated_side$maxdiff),
+      converged             = control_side$converged && treated_side$converged
+    )
   }
-  if (length(base.weight) != ncontrols) {
-    stop("length(base.weight) !=  number of controls  sum(Treatment==0)")
+
+  z$Treatment <- Treatment.in
+  z$X         <- X
+  z$estimand  <- estimand
+  class(z)    <- "ebalance"
+  z
+}
+
+# Internal: handle the single-solve case (ATT or ATC). Wraps the
+# solver call and validation that's shared between the two role-symmetric
+# estimands.
+.eb_dispatch_one_side <- function(donor_X, target_means, norm.constant,
+                                  base.weight, n_donor_label, n_donor,
+                                  coefs, method, max.iterations,
+                                  constraint.tolerance, print.level) {
+  if (length(base.weight) != n_donor) {
+    stop(sprintf("length(base.weight) != %d (number of %s)",
+                 n_donor, n_donor_label))
   }
   if (any(is.na(base.weight)) || any(!is.finite(base.weight))) {
     stop("base.weight must be finite (no NA / NaN / Inf)")
@@ -108,71 +210,75 @@ ebalance <- function(Treatment,
   if (sum(base.weight) <= 0) {
     stop("base.weight must have positive sum")
   }
-
-  co.x <- X[Treatment == 0, , drop = FALSE]
-  co.x <- cbind(rep(1, ncontrols), co.x)
-
-  if (qr(co.x)$rank != ncol(co.x)) {
-    stop("collinearity in covariate matrix for controls (remove collinear covariates)")
-  }
-
-  tr.total <- colSums(X[Treatment == 1, , drop = FALSE])
-
-  if (is.null(norm.constant)) {
-    norm.constant <- ntreated
-  }
   if (length(norm.constant) != 1) {
     stop("length(norm.constant) != 1")
   }
-
-  tr.total <- c(norm.constant, tr.total)
-
-  if (is.null(coefs)) {
-    coefs <- c(log(tr.total[1] / sum(base.weight)), rep(0, (ncol(co.x) - 1)))
-  }
-
-  if (length(coefs) != ncol(co.x)) {
-    stop("coefs needs to have same length as number of covariates plus one")
-  }
-
-  # ---- run algorithm -------------------------------------------------------
-  eb.out <- if (method == "newton") {
-    eb(tr.total = tr.total,
-       co.x = co.x,
-       coefs = coefs,
-       base.weight = base.weight,
-       max.iterations = max.iterations,
-       constraint.tolerance = constraint.tolerance,
-       print.level = print.level)
-  } else {
-    .eb_autodiff(tr.total = tr.total,
-                 co.x = co.x,
-                 base.weight = base.weight,
-                 max.iterations = max.iterations,
-                 constraint.tolerance = constraint.tolerance,
-                 print.level = print.level)
-  }
-
-  if (eb.out$converged && print.level > 0) {
+  side <- .eb_solve_side(
+    donor_X = donor_X, target_means = target_means,
+    norm_constant = norm.constant, base.weight = base.weight,
+    coefs = coefs,
+    method = method, max.iterations = max.iterations,
+    constraint.tolerance = constraint.tolerance, print.level = print.level
+  )
+  if (side$converged && print.level > 0) {
     cat("Converged within tolerance \n")
   }
-
-  z <- list(
-    target.margins       = tr.total,
-    co.xdata             = co.x,
-    w                    = eb.out$Weights.ebal,
-    coefs                = eb.out$coefs,
-    maxdiff              = eb.out$maxdiff,
+  list(
+    target.margins       = side$target.margins,
+    co.xdata             = side$co.xdata,
+    w                    = side$w,
+    coefs                = side$coefs,
+    maxdiff              = side$maxdiff,
     norm.constant        = norm.constant,
     constraint.tolerance = constraint.tolerance,
     max.iterations       = max.iterations,
     base.weight          = base.weight,
     print.level          = print.level,
-    converged            = eb.out$converged,
-    Treatment            = Treatment.in,
-    X                    = X
+    converged            = side$converged
   )
-
-  class(z) <- "ebalance"
-  z
 }
+
+# Internal: actually call the solver for one (donor, target) pair.
+# Exists so ATT/ATC/ATE all share a single code path through eb() /
+# .eb_autodiff(), with the intercept column and norm.constant entry
+# packed in the standard places.
+.eb_solve_side <- function(donor_X, target_means, norm_constant,
+                           base.weight, coefs, method,
+                           max.iterations, constraint.tolerance,
+                           print.level) {
+  n <- nrow(donor_X)
+  co.x <- cbind(rep(1, n), donor_X)
+  if (qr(co.x)$rank != ncol(co.x)) {
+    stop("collinearity in covariate matrix (remove collinear covariates)")
+  }
+  tr.total <- c(norm_constant, target_means * norm_constant)
+  if (is.null(coefs)) {
+    coefs <- c(log(tr.total[1] / sum(base.weight)), rep(0, ncol(co.x) - 1))
+  }
+  if (length(coefs) != ncol(co.x)) {
+    stop("coefs needs to have same length as number of covariates plus one")
+  }
+  out <- if (method == "newton") {
+    eb(tr.total = tr.total, co.x = co.x, coefs = coefs,
+       base.weight = base.weight,
+       max.iterations = max.iterations,
+       constraint.tolerance = constraint.tolerance,
+       print.level = print.level)
+  } else {
+    .eb_autodiff(tr.total = tr.total, co.x = co.x,
+                 base.weight = base.weight,
+                 max.iterations = max.iterations,
+                 constraint.tolerance = constraint.tolerance,
+                 print.level = print.level)
+  }
+  list(
+    target.margins = tr.total,
+    co.xdata       = co.x,
+    w              = out$Weights.ebal,
+    coefs          = out$coefs,
+    maxdiff        = out$maxdiff,
+    converged      = out$converged
+  )
+}
+
+`%||%` <- function(a, b) if (is.null(a)) b else a

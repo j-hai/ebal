@@ -11,7 +11,7 @@ function(object, ...)
     if (is.null(object$Treatment) || is.null(object$X))
       stop("\n autoplot() requires the Treatment vector and X matrix on\n the ebalance object (added in 0.2.0). Refit with the current\n ebalance() to enable this method. \n")
 
-    bt <- .balance_table(object$Treatment, object$X, object$w)
+    bt <- .balance_table(object$Treatment, object$X, weights(object))
     df <- data.frame(
       term  = factor(rownames(bt), levels = rev(rownames(bt))),
       pre   = bt$std.diff.pre,

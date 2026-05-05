@@ -7,7 +7,7 @@ function(x, ...)
   {
     if (is.null(x$Treatment) || is.null(x$X))
       stop("\n tidy() requires the Treatment vector and X matrix to be\n stored on the ebalance object (added in 0.2.0). Refit with the\n current ebalance() to enable this method. \n")
-    bt <- .balance_table(x$Treatment, x$X, x$w)
+    bt <- .balance_table(x$Treatment, x$X, weights(x))
     out <- data.frame(
       term            = rownames(bt),
       mean_treated    = bt$mean.Tr,
@@ -28,20 +28,29 @@ tidy.ebalance.trim <- tidy.ebalance
 glance.ebalance <-
 function(x, ...)
   {
+    estimand   <- x$estimand %||% "ATT"
     n_treated  <- if (!is.null(x$Treatment)) sum(x$Treatment == 1) else NA_integer_
-    n_control  <- length(x$w)
+    n_control  <- if (!is.null(x$Treatment)) sum(x$Treatment == 0) else length(x$w)
     nmom       <- length(x$target.margins) - 1L
-    sum_w      <- sum(x$w)
-    # Effective sample size (Kish): (sum w)^2 / sum(w^2)
-    ess <- if (sum_w > 0) sum_w^2 / sum(x$w^2) else NA_real_
+    # Pick the side(s) that were actually reweighted to compute the
+    # ESS / max-weight diagnostics.
+    if (estimand == "ATE") {
+      w_active <- c(x$control_solve$w, x$treated_solve$w)
+    } else {
+      # ATT or ATC: x$w is whichever side was reweighted.
+      w_active <- x$w
+    }
+    sum_w <- sum(w_active)
+    ess   <- if (sum_w > 0) sum_w^2 / sum(w_active^2) else NA_real_
     data.frame(
+      estimand       = estimand,
       n_treated      = n_treated,
       n_control      = n_control,
       n_moments      = nmom,
       sum_weights    = sum_w,
       ess_kish       = ess,
-      max_weight     = max(x$w),
-      max_weight_ratio = max(x$w) / mean(x$w),
+      max_weight     = max(w_active),
+      max_weight_ratio = max(w_active) / mean(w_active),
       maxdiff        = x$maxdiff,
       converged      = x$converged,
       stringsAsFactors = FALSE

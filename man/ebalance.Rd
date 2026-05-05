@@ -34,7 +34,8 @@ ebalance(Treatment, X = NULL, base.weight = NULL,
          norm.constant = NULL, coefs = NULL,
          max.iterations = 200, constraint.tolerance = 1,
          print.level = 0, data = NULL,
-         method = c("newton", "autodiff"), \dots)
+         method = c("newton", "autodiff"),
+         estimand = c("ATT", "ATE", "ATC"), \dots)
 }
 
 \arguments{
@@ -89,6 +90,23 @@ better at large covariate counts. The autodiff path requires the
 \pkg{torch} package (in \code{Suggests:}); the first call may require
 \code{torch::install_torch()} to download libtorch. Contributed by Apoorva
 Lal; ported from \url{https://github.com/apoorvalal/ebal}.
+}
+  \item{estimand}{
+Causal estimand the weights are constructed for. One of \code{"ATT"}
+(default; reweight controls to match treated moments -- the original
+behavior of the package), \code{"ATC"} (reweight treated to match control
+moments; symmetric to ATT with roles swapped), or \code{"ATE"} (reweight
+both groups to match the overall sample moments; the resulting per-unit
+weights -- accessible via \code{weights(fit)} -- can be passed to a
+weighted regression for the average treatment effect on the population).
+For \code{"ATE"}, \code{base.weight} can be either a single vector
+(applied to controls; treated default to uniform) or a named list
+\code{list(control = ..., treated = ...)}. The returned object carries
+both per-side solves under \code{$control_solve} and \code{$treated_solve};
+the top-level fields (\code{$w}, \code{$coefs}, \code{$target.margins})
+mirror the control-side solve for backward compatibility with code that
+reads them. \code{ebalance.trim()} currently supports \code{"ATT"} and
+\code{"ATC"} only.
 }
   \item{\dots}{
 Additional arguments. For the formula method, passed through to the default

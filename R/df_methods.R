@@ -7,7 +7,7 @@ function(x, ...)
   {
     if (is.null(x$Treatment) || is.null(x$X))
       stop("\n as.data.frame() requires the Treatment vector and X matrix on\n the ebalance object (added in 0.2.0). Refit with the current\n ebalance() to enable this method. \n")
-    bt <- .balance_table(x$Treatment, x$X, x$w)
+    bt <- .balance_table(x$Treatment, x$X, weights(x))
     data.frame(
       term            = rownames(bt),
       mean_treated    = bt$mean.Tr,

@@ -21,9 +21,10 @@ test_that("glance.ebalance returns one row of summary stats", {
   fit <- .fit_toy()
   out <- glance.ebalance(fit)
   expect_equal(nrow(out), 1L)
-  expect_named(out, c("n_treated", "n_control", "n_moments",
+  expect_named(out, c("estimand", "n_treated", "n_control", "n_moments",
                       "sum_weights", "ess_kish", "max_weight",
                       "max_weight_ratio", "maxdiff", "converged"))
+  expect_equal(out$estimand, "ATT")
   expect_equal(out$n_treated, 30L)
   expect_equal(out$n_control, 50L)
   expect_true(out$converged)

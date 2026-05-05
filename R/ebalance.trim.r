@@ -13,6 +13,10 @@ ebalance.trim <-
     if( is(ebalanceobj,"ebalance")==FALSE ){
      stop("ebalanceobj must be an ebalance object from a call to ebalance()")
     }
+    estimand <- ebalanceobj$estimand %||% "ATT"
+    if (estimand == "ATE") {
+      stop("ebalance.trim() does not support estimand = \"ATE\" yet; trim each side separately by calling ebalance() with estimand = \"ATT\" or \"ATC\" and then ebalance.trim() on the resulting object.")
+    }
     minimization <- FALSE
     if(is.null(max.weight)){
      max.weight <- max(ebalanceobj$w/mean(ebalanceobj$w))

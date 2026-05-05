@@ -1,5 +1,22 @@
 # ebal 0.3-0
 
+## New: ATE / ATC estimands
+
+* `ebalance()` gains an `estimand` argument: `"ATT"` (default; original
+  behavior), `"ATC"` (treated reweighted to match controls; symmetric to
+  ATT), `"ATE"` (both groups reweighted to match the overall sample).
+* For `"ATE"` the returned object carries per-side solves under
+  `$control_solve` and `$treated_solve`. `weights(fit)` returns a
+  length-n vector with both groups carrying their estimated weights;
+  drop straight into `lm(..., weights = w)` for the population ATE.
+* `glance(fit)` now reports the `estimand`. `summary(fit)`, `plot(fit)`,
+  `autoplot(fit)`, `tidy(fit)`, and `as.data.frame(fit)` all work
+  unchanged across estimands; the underlying `.balance_table()` helper
+  consumes a length-n weight vector so all three estimands route through
+  the same display path.
+* `ebalance.trim()` does not yet support `"ATE"` and refuses with a
+  clear message; trim each side separately if needed.
+
 ## New: alternative solver via autodiff
 
 * `ebalance()` gains a `method` argument: `"newton"` (default; the
