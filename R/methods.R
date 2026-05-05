@@ -83,13 +83,22 @@ print.ebalance <- function(x, ...) {
 }
 
 print.ebalance.trim <- function(x, ...) {
-  cat("Entropy balancing (trimmed weights)\n")
-  cat("-----------------------------------\n")
+  estimand <- x$estimand %||% "ATT"
+  cat("Entropy balancing (trimmed weights, estimand: ", estimand, ")\n", sep = "")
+  cat("---------------------------------------------\n")
   ntreated  <- if (!is.null(x$Treatment)) sum(x$Treatment == 1) else NA
-  ncontrols <- length(x$w)
-  cat(sprintf("Treated:        %d\n", ntreated))
-  cat(sprintf("Controls:       %d (sum of weights = %.3f)\n",
-              ncontrols, sum(x$w)))
+  ncontrols <- if (!is.null(x$Treatment)) sum(x$Treatment == 0) else NA
+  if (estimand == "ATC") {
+    # x$w is the trimmed weight vector for the *treated* side.
+    cat(sprintf("Treated:        %d (reweighted; sum of weights = %.3f)\n",
+                ntreated, sum(x$w)))
+    cat(sprintf("Controls:       %d\n", ncontrols))
+  } else {
+    # ATT (or unflagged legacy objects).
+    cat(sprintf("Treated:        %d\n", ntreated))
+    cat(sprintf("Controls:       %d (reweighted; sum of weights = %.3f)\n",
+                ncontrols %||% length(x$w), sum(x$w)))
+  }
   nmom <- length(x$target.margins) - 1L
   cat(sprintf("Moments:        %d covariate moment(s) balanced\n", nmom))
   cat(sprintf("Converged:      %s   (max moment deviation = %.3g)\n",

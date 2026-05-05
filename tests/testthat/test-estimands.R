@@ -113,6 +113,34 @@ test_that("ebalance() rejects norm.constant when estimand = 'ATE'", {
   )
 })
 
+test_that("ATE accepts list(control=, treated=) for coefs (per-side warm start)", {
+  d <- .toy_estimand()
+  fit_cold <- .fit_e(d, "ATE")
+  fit_warm <- ebalance(
+    Treatment = d$treatment, X = d$X, estimand = "ATE",
+    coefs = list(control = fit_cold$control_solve$coefs,
+                 treated = fit_cold$treated_solve$coefs),
+    constraint.tolerance = 1e-8, print.level = 0
+  )
+  expect_true(fit_warm$converged)
+  expect_equal(fit_warm$control_solve$w, fit_cold$control_solve$w,
+               tolerance = 1e-3)
+  expect_equal(fit_warm$treated_solve$w, fit_cold$treated_solve$w,
+               tolerance = 1e-3)
+})
+
+test_that("print(ebalance.trim) for ATC labels weights on the treated side", {
+  d <- .toy_estimand()
+  fit_atc <- .fit_e(d, "ATC")
+  trimmed <- ebalance.trim(fit_atc, max.weight = 5)
+  out <- capture.output(print(trimmed))
+  # Expect "Treated: ... (reweighted ...)" rather than "Controls: ... (reweighted ...)"
+  treated_line <- grep("^Treated:", out, value = TRUE)
+  control_line <- grep("^Controls:", out, value = TRUE)
+  expect_match(treated_line, "reweighted")
+  expect_no_match(control_line, "reweighted")
+})
+
 test_that("autodiff respects eb-form starting coefs (P4 regression)", {
   skip_if_not_installed("torch")
   skip_if_not(torch::torch_is_installed(),

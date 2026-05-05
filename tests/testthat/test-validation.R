@@ -42,6 +42,48 @@ test_that("formula NA in response is rejected with a clear message", {
                "Treatment contains missing data")
 })
 
+test_that("norm.constant rejects 0, NA, Inf, negative for ATT/ATC", {
+  d <- .toy()
+  for (bad in list(0, NA_real_, Inf, -1)) {
+    expect_error(
+      ebalance(Treatment = d$treatment, X = d$X, norm.constant = bad),
+      "finite positive scalar"
+    )
+    expect_error(
+      ebalance(Treatment = d$treatment, X = d$X,
+               norm.constant = bad, estimand = "ATC"),
+      "finite positive scalar"
+    )
+  }
+  expect_error(
+    ebalance(Treatment = d$treatment, X = d$X,
+             norm.constant = c(1, 2)),
+    "finite positive scalar"
+  )
+})
+
+test_that("max.iterations and constraint.tolerance are validated", {
+  d <- .toy()
+  expect_error(ebalance(Treatment = d$treatment, X = d$X,
+                        max.iterations = 0),
+               "finite positive scalar")
+  expect_error(ebalance(Treatment = d$treatment, X = d$X,
+                        max.iterations = -1),
+               "finite positive scalar")
+  expect_error(ebalance(Treatment = d$treatment, X = d$X,
+                        max.iterations = NA),
+               "finite positive scalar")
+  expect_error(ebalance(Treatment = d$treatment, X = d$X,
+                        constraint.tolerance = 0),
+               "finite positive scalar")
+  expect_error(ebalance(Treatment = d$treatment, X = d$X,
+                        constraint.tolerance = NA),
+               "finite positive scalar")
+  expect_error(ebalance(Treatment = d$treatment, X = d$X,
+                        constraint.tolerance = -0.1),
+               "finite positive scalar")
+})
+
 test_that("base.weight rejects NA / Inf / negatives / zero sum", {
   d <- .toy()
   bw <- rep(1, 50)

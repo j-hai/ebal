@@ -74,11 +74,13 @@ ebalance <- function(Treatment,
   if (length(Treatment) != nrow(X)) {
     stop("length(Treatment) != nrow(X)")
   }
-  if (length(max.iterations) != 1) {
-    stop("length(max.iterations) != 1")
+  if (length(max.iterations) != 1 || !is.numeric(max.iterations) ||
+      !is.finite(max.iterations) || max.iterations < 1) {
+    stop("max.iterations must be a finite positive scalar (>= 1)")
   }
-  if (length(constraint.tolerance) != 1) {
-    stop("length(constraint.tolerance) != 1")
+  if (length(constraint.tolerance) != 1 || !is.numeric(constraint.tolerance) ||
+      !is.finite(constraint.tolerance) || constraint.tolerance <= 0) {
+    stop("constraint.tolerance must be a finite positive scalar")
   }
 
   # ---- setup ---------------------------------------------------------------
@@ -153,17 +155,32 @@ ebalance <- function(Treatment,
     .check_bw(bw_ctrl, ncontrols, "controls")
     .check_bw(bw_trt,  ntreated,  "treated")
 
+    # coefs follows the same per-side dispatch convention as base.weight:
+    # NULL gets a default seed inside .eb_solve_side(); a length-(k+1)
+    # vector is interpreted as the control-side seed (treated defaults
+    # to NULL); a list(control=, treated=) names them explicitly.
+    if (is.null(coefs)) {
+      coef_ctrl <- NULL
+      coef_trt  <- NULL
+    } else if (is.list(coefs)) {
+      coef_ctrl <- coefs$control
+      coef_trt  <- coefs$treated
+    } else {
+      coef_ctrl <- coefs
+      coef_trt  <- NULL
+    }
+
     control_side <- .eb_solve_side(
       donor_X = X[Treatment == 0, , drop = FALSE],
       target_means = overall_means, norm_constant = ncontrols,
-      base.weight = bw_ctrl, coefs = NULL,
+      base.weight = bw_ctrl, coefs = coef_ctrl,
       method = method, max.iterations = max.iterations,
       constraint.tolerance = constraint.tolerance, print.level = print.level
     )
     treated_side <- .eb_solve_side(
       donor_X = X[Treatment == 1, , drop = FALSE],
       target_means = overall_means, norm_constant = ntreated,
-      base.weight = bw_trt, coefs = NULL,
+      base.weight = bw_trt, coefs = coef_trt,
       method = method, max.iterations = max.iterations,
       constraint.tolerance = constraint.tolerance, print.level = print.level
     )
@@ -218,8 +235,9 @@ ebalance <- function(Treatment,
   if (sum(base.weight) <= 0) {
     stop("base.weight must have positive sum")
   }
-  if (length(norm.constant) != 1) {
-    stop("length(norm.constant) != 1")
+  if (length(norm.constant) != 1 || !is.numeric(norm.constant) ||
+      !is.finite(norm.constant) || norm.constant <= 0) {
+    stop("norm.constant must be a finite positive scalar")
   }
   side <- .eb_solve_side(
     donor_X = donor_X, target_means = target_means,
