@@ -8,7 +8,7 @@ output:
     toc_depth: 2
 vignette: >
   %\VignetteIndexEntry{Quickstart: entropy balancing with ebal}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
