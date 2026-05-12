@@ -27,6 +27,11 @@ install.packages("ebal")
 remotes::install_github("j-hai/ebal")
 ```
 
+## Documentation
+
+- [Project page](https://web.stanford.edu/~jhain/projects/4_project_ebal/) — package overview and current release notes.
+- [Explainer](https://web.stanford.edu/~jhain/projects/entropy-balancing-explainer/) — a self-contained tutorial on entropy balancing for R and Stata users, including the Lalonde NSW benchmark.
+
 ## Estimands at a glance
 
 `ebalance(..., estimand = ...)` chooses what gets reweighted:
